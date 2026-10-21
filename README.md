@@ -167,6 +167,14 @@ local webserver at http://localhost:5173, run the following command.
 pnpm dev
 ```
 
+On Windows PowerShell, if `pnpm` fails with “running scripts is disabled”,
+use the `.cmd` launcher without changing your system execution policy:
+
+```powershell
+pnpm.cmd dev
+pnpm.cmd build
+```
+
 Compile, optimize, minify and uglify all source files to build/
 
 ```bash copy
