@@ -1,6 +1,7 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
-  Table,
   Tag,
   Button,
   Card,
@@ -311,7 +312,7 @@ const Leave = () => {
           </Space>
         }
       >
-        <Table
+        <ListingTable listingTitle="Leave Requests" fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
           rowKey="_id"
           columns={columns}
           dataSource={filtered}

@@ -1,3 +1,6 @@
+import { fetchAllListingPages } from 'src/services/listingService';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -16,7 +19,6 @@ import {
   Space,
   Statistic,
   Switch,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -31,7 +33,6 @@ import {
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SearchOutlined,
   TagsOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
@@ -280,7 +281,6 @@ const Products = () => {
     createTypes,
     updateTypes,
     deleteTypes,
-    getProducts,
     createProducts,
     updateProducts,
     deleteProducts,
@@ -385,8 +385,7 @@ const Products = () => {
   const fetchProducts = async () => {
     try {
       setProductsLoading(true);
-      const res = await getProducts({ limit: 1000 });
-      setProducts(res?.data?.products || []);
+      setProducts(await fetchAllListingPages<Product>('/products', 'products'));
     } catch {
       message.error('Unable to load products');
     } finally {
@@ -401,28 +400,6 @@ const Products = () => {
   useEffect(() => {
     refreshPage();
   }, []);
-
-  const filteredProducts = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase();
-
-    return products.filter((product) => {
-      const categoryName = getCategoryName(product.category).toLowerCase();
-      const subCategoryName = getSubCategoryName(
-        product.subCategory
-      ).toLowerCase();
-      const matchesSearch =
-        !normalizedSearch ||
-        product.name?.toLowerCase().includes(normalizedSearch) ||
-        product.description?.toLowerCase().includes(normalizedSearch) ||
-        categoryName.includes(normalizedSearch) ||
-        subCategoryName.includes(normalizedSearch);
-
-      const matchesCategory =
-        !categoryFilter || getCategoryId(product.category) === categoryFilter;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [categoryFilter, products, searchText, subTypes, types]);
 
   const uncategorizedCount = products.filter(
     (product) => !getCategoryId(product.category)
@@ -934,7 +911,7 @@ const Products = () => {
                 </Space>
               }
             >
-              <Table
+              <ListingTable listingTitle="Product Types" fields={LISTING_FIELDS.types} filterKeys={[]} importConfig={canCreate('products') && listingImport('types', fetchTypes)}
                 columns={typeColumns}
                 dataSource={types}
                 rowHoverable={false}
@@ -957,7 +934,7 @@ const Products = () => {
                       Sub Types
                     </Text>
                   </div>
-                  <Table
+                  <ListingTable listingTitle="Product Subtypes" fields={LISTING_FIELDS.subtypes} filterKeys={["category"]} importConfig={canCreate('products') && listingImport('subtypes', fetchSubTypes, (row) => types.some((type) => type._id === row.category) ? [] : ['Type ID does not exist'])}
                     size="small"
                     rowKey="_id"
                     rowHoverable={false}
@@ -1020,33 +997,10 @@ const Products = () => {
           <Col xs={24} xl={15}>
             <Card
               title="Products"
-              extra={
-                <Space wrap>
-                  <Input
-                    allowClear
-                    prefix={<SearchOutlined />}
-                    placeholder="Search"
-                    value={searchText}
-                    onChange={(event) => setSearchText(event.target.value)}
-                    style={{ width: 160 }}
-                  />
-                  <Select
-                    allowClear
-                    placeholder="All types"
-                    value={categoryFilter}
-                    onChange={setCategoryFilter}
-                    style={{ width: 130 }}
-                    options={types.map((type) => ({
-                      label: type.name,
-                      value: type._id,
-                    }))}
-                  />
-                </Space>
-              }
             >
-              <Table
+              <ListingTable listingTitle="Products" fields={LISTING_FIELDS.products} filterKeys={["category","isActive"]} importConfig={canCreate('products') && listingImport('products', fetchProducts, (row) => types.some((type) => type._id === row.category) ? [] : ['Type ID does not exist'])}
                 columns={productColumns}
-                dataSource={filteredProducts}
+                dataSource={products}
                 rowHoverable={false}
                 rowKey="_id"
                 loading={productsLoading}

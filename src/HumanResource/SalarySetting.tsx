@@ -1,3 +1,5 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
@@ -15,7 +17,6 @@ import {
   Segmented,
   Space,
   Statistic,
-  Table,
   Tag,
   Typography,
   message,
@@ -505,7 +506,7 @@ const SalarySetting = () => {
             </Space>
           }
         >
-          <Table
+          <ListingTable listingTitle="Salary Settings" fields={LISTING_FIELDS.salary} filterKeys={["status","roleId","isSalaryAssigned"]} importConfig={canCreate('salary') && listingImport('salary', getEmployeDetailsWithSalary, (row) => { const staff = allStaffs.find((item) => item._id === row.staffId); return !staff ? ['Staff ID does not exist'] : staff.isSalaryAssigned ? ['Salary already assigned; use Edit for this employee'] : []; })}
             rowKey="_id"
             columns={columns}
             dataSource={filteredStaffs}

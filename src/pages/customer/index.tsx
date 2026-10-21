@@ -1,3 +1,6 @@
+import { fetchAllListingPages } from 'src/services/listingService';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Avatar,
@@ -14,7 +17,6 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -69,7 +71,7 @@ type Customer = {
 };
 
 const CustomersPage = () => {
-  const { getCustomers, createCustomer, updateCustomer, deleteCustomer } =
+  const { createCustomer, updateCustomer, deleteCustomer } =
     useCustomerService();
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const { getState } = stateService();
@@ -83,7 +85,6 @@ const CustomersPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
-  const [search, setSearch] = useState('');
   const [allStates, setAllStates] = useState<
     { value: string; label: string }[]
   >([]);
@@ -96,8 +97,7 @@ const CustomersPage = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const res = (await getCustomers()) as any;
-      setCustomers([...(res?.data?.customers || res?.data || [])].reverse());
+      setCustomers((await fetchAllListingPages<Customer>('/customers', 'customers')).reverse());
     } catch {
       message.error('Unable to load customers');
     } finally {
@@ -217,17 +217,6 @@ const CustomersPage = () => {
       setDeletingId(null);
     }
   };
-
-  const filtered = customers.filter((c) => {
-    const s = search.trim().toLowerCase();
-    return (
-      !s ||
-      c.name?.toLowerCase().includes(s) ||
-      c.phone?.includes(s) ||
-      c.email?.toLowerCase().includes(s) ||
-      c.customerCode?.toLowerCase().includes(s)
-    );
-  });
 
   const columns: ColumnsType<Customer> = [
     {
@@ -401,20 +390,11 @@ const CustomersPage = () => {
 
         <Card
           title="Customer List"
-          extra={
-            <Input.Search
-              placeholder="Search name, phone, email, code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              allowClear
-              style={{ width: 260 }}
-            />
-          }
         >
-          <Table
+          <ListingTable listingTitle="Customers" fields={LISTING_FIELDS.customers} filterKeys={["type","isActive","address.city"]} importConfig={canCreate('customers') && listingImport('customers', fetchCustomers)}
             rowKey="_id"
             columns={columns}
-            dataSource={filtered}
+            dataSource={customers}
             loading={loading}
             rowHoverable={false}
             pagination={{ pageSize: 10, showSizeChanger: true }}

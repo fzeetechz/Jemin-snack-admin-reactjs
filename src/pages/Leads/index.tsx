@@ -1,9 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { fetchAllListingPages } from 'src/services/listingService';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Col,
   Row,
-  Table,
   Tag,
   Button,
   Flex,
@@ -16,7 +18,6 @@ import {
   Modal,
   message,
   Upload,
-  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,10 +26,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   ExclamationCircleOutlined,
-  UploadOutlined,
-  DownloadOutlined,
 } from '@ant-design/icons';
-import * as XLSX from 'xlsx';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { UserAvatar } from '../../components';
@@ -39,18 +37,14 @@ import { timeConverter } from '../../utils/convertor';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../redux/store';
 
-import { LeadStage, LeadSource, LeadFormValues, Lead } from '../../types/leads';
+import { LeadSource, LeadFormValues, Lead } from '../../types/leads';
 import LeadViewModal from './LeadViewModal';
 import { usePermissions } from '../../hooks/usePermissions';
 import configService from '../../services/configService';
 import stateService from 'src/services/stateService';
-import { exportLeads } from './exportLeads';
 
 const LeadsPage = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [q, setQ] = useState('');
-  const [stage, setStage] = useState<LeadStage | undefined>();
-  const [source, setSource] = useState<LeadSource | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [viewLead, setViewLead] = useState<Lead | null>(null);
@@ -68,10 +62,8 @@ const LeadsPage = () => {
 
   const {
     creatLeads,
-    getLeads,
     deleteLeads,
     updateLeads,
-    bulkCreateLeads,
     addAttachements,
   } = leadServices();
   const { getStaff } = staffService();
@@ -84,10 +76,6 @@ const LeadsPage = () => {
   const [LEADSTATUS, SETLEADSTATUS] = useState([]);
   const [LEADSOURCE, SETLEADSOURCE] = useState([]);
   const [PRIORITY, SETPRIORITY] = useState([]);
-  const [importModal, setImportModal] = useState(false);
-  const [importRows, setImportRows] = useState<any[]>([]);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importError, setImportError] = useState('');
   const [activityPage, setActvityTab] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<UploadFile[]>([]);
 
@@ -178,28 +166,8 @@ const LeadsPage = () => {
   }, []);
 
   const fetchLeads = async () => {
-    const res = (await getLeads()) as any;
-    if (res.success) {
-      setLeads(res.data);
-    }
+    try { setLeads(await fetchAllListingPages<Lead>('/leads', 'items')); } catch { message.error('Unable to load leads'); }
   };
-
-  const filtered = useMemo(() => {
-    return leads.filter((l) => {
-      const search = q.trim().toLowerCase();
-      const matchesSearch =
-        !search ||
-        l?.name?.toLowerCase().includes(search) ||
-        l?.company?.toLowerCase().includes(search) ||
-        l?.email?.toLowerCase().includes(search) ||
-        l?.phone?.toLowerCase().includes(search);
-
-      const matchesStage = !stage || l.status === stage;
-      const matchesSource = !source || l.source === source;
-
-      return matchesSearch && matchesStage && matchesSource;
-    });
-  }, [q, stage, source, leads]);
 
   const handleStateChange = async (stateName: string) => {
     setSelectedState(stateName);
@@ -374,110 +342,6 @@ const LeadsPage = () => {
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    setImportError('');
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(e.target?.result, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[] = XLSX.utils.sheet_to_json(ws);
-        if (!rows.length)
-          return setImportError('File is empty or invalid format');
-        setImportRows(rows);
-      } catch {
-        setImportError('Failed to parse file. Use .xlsx or .csv format');
-      }
-    };
-    reader.readAsBinaryString(file);
-    return false;
-  };
-
-  const handleImportConfirm = async () => {
-    setImportLoading(true);
-    try {
-      const leads = importRows.map((r) => ({
-        name: r.name || r.Name || '',
-        email: r.email || r.Email || '',
-        phone: r.phone || r.Phone || '',
-        company: r.company || r.Company || '',
-        source: r.source || r.Source || 'Website',
-        status: r.status || r.Status || r.leadStatus || r.LeadStatus || 'New',
-        assignedTo: r.assignTo || r.AssignedTo,
-        priority: r.priority || r.Priority || '',
-        city: r.city || r.City || '',
-        country: r.country || r.Country || '',
-      }));
-
-      const res = (await bulkCreateLeads(leads)) as any;
-      if (res.success) {
-        message.success(res.message);
-        setImportModal(false);
-        setImportRows([]);
-        await fetchLeads();
-      } else {
-        setImportError(res.message || 'Import failed');
-      }
-    } catch {
-      setImportError('Something went wrong');
-    }
-    setImportLoading(false);
-  };
-
-  const downloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet([
-      {
-        name: '',
-        email: '',
-        phone: '',
-        company: '',
-        source: '',
-        status: '',
-        priority: '',
-        assignTo: '',
-        city: '',
-        country: '',
-      },
-    ]);
-
-    if (ws.E1) {
-      ws.E1.c = [
-        {
-          a: 'System',
-          t: 'Allowed source values: Facebook, Referral, Website, Walk-in, Instagram',
-        },
-      ];
-    }
-
-    if (ws.F1) {
-      ws.F1.c = [
-        {
-          a: 'System',
-          t: 'leadStatus/status allowed values only: New, Contacted, Proposal',
-        },
-      ];
-    }
-    if (ws.G1) {
-      ws.G1.c = [
-        {
-          a: 'System',
-          t: 'priority allowed values only: low, medium, high',
-        },
-      ];
-    }
-
-    const instructionsWs = XLSX.utils.aoa_to_sheet([
-      ['Field', 'Allowed values'],
-      ['source', 'Facebook, Referral, Website, Walk-in, Instagram'],
-      ['leadStatus / status', 'New, Contacted, Proposal'],
-    ]);
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Leads');
-    XLSX.utils.book_append_sheet(wb, instructionsWs, 'Instructions');
-    XLSX.writeFile(wb, 'leads_template.xlsx');
-  };
-
   const columns = [
     {
       title: 'Name/Company',
@@ -604,22 +468,6 @@ const LeadsPage = () => {
                   {!activityPage && (
                     <Space>
                       <Button
-                        icon={<UploadOutlined />}
-                        onClick={() => {
-                          setImportRows([]);
-                          setImportError('');
-                          setImportModal(true);
-                        }}
-                      >
-                        Import Leads
-                      </Button>
-                      <Button
-                        icon={<DownloadOutlined />}
-                        onClick={() => exportLeads(filtered)}
-                      >
-                        Export Leads
-                      </Button>
-                      <Button
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={handleOpenDrawer}
@@ -632,43 +480,10 @@ const LeadsPage = () => {
               )
             }
           >
-            <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-              <Col xs={24} md={10}>
-                <Input
-                  placeholder="Search by name, company, email, phone..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  allowClear
-                />
-              </Col>
-
-              <Col xs={24} md={7}>
-                <Select
-                  style={{ width: '100%' }}
-                  placeholder="Filter by stage"
-                  allowClear
-                  value={stage}
-                  onChange={(v) => setStage(v)}
-                  options={LEADSTATUS}
-                />
-              </Col>
-
-              <Col xs={24} md={7}>
-                <Select
-                  style={{ width: '100%' }}
-                  placeholder="Filter by source"
-                  allowClear
-                  value={source}
-                  onChange={(v) => setSource(v)}
-                  options={LEADSOURCE}
-                />
-              </Col>
-            </Row>
-
-            <Table
+            <ListingTable listingTitle="Leads" onRefresh={fetchLeads} fields={LISTING_FIELDS.leads} filterKeys={["status","source","priority","assignedTo"]} importConfig={canCreate('leads') && listingImport('leads', fetchLeads)}
               rowKey="_id"
               columns={columns}
-              dataSource={filtered}
+              dataSource={leads}
               pagination={{ pageSize: 8 }}
               scroll={{ x: 'max-content' }}
               rowHoverable={false}
@@ -940,66 +755,6 @@ const LeadsPage = () => {
         </Form>
       </Drawer>
 
-      <Modal
-        title="Import Leads"
-        open={importModal}
-        onCancel={() => setImportModal(false)}
-        onOk={handleImportConfirm}
-        okText={`Import ${
-          importRows.length ? `(${importRows.length} rows)` : ''
-        }`}
-        okButtonProps={{ disabled: !importRows.length, loading: importLoading }}
-        width={700}
-      >
-        <Flex vertical gap={12}>
-          <Flex justify="space-between" align="center">
-            <Typography.Text type="secondary">
-              Upload a .xlsx or .csv file with lead data
-            </Typography.Text>
-            <Button
-              size="small"
-              icon={<DownloadOutlined />}
-              onClick={downloadTemplate}
-            >
-              Download Template
-            </Button>
-          </Flex>
-          <Upload.Dragger
-            accept=".xlsx,.csv"
-            beforeUpload={handleFileUpload}
-            showUploadList={false}
-            maxCount={1}
-          >
-            <p className="ant-upload-drag-icon">
-              <UploadOutlined style={{ fontSize: 32, color: '#1677ff' }} />
-            </p>
-            <p className="ant-upload-text">Click or drag file to upload</p>
-            <p className="ant-upload-hint">.xlsx or .csv supported</p>
-          </Upload.Dragger>
-          {importError && <Alert type="error" message={importError} showIcon />}
-          {importRows.length > 0 && (
-            <>
-              <Typography.Text strong>
-                {importRows.length} rows detected. Preview (first 5):
-              </Typography.Text>
-              <Table
-                size="small"
-                dataSource={importRows.slice(0, 5)}
-                columns={Object.keys(importRows[0]).map((k) => ({
-                  title: k,
-                  dataIndex: k,
-                  key: k,
-                  ellipsis: true,
-                }))}
-                pagination={false}
-                rowKey={(_, i) => String(i)}
-                scroll={{ x: 'max-content' }}
-                rowHoverable={false}
-              />
-            </>
-          )}
-        </Flex>
-      </Modal>
     </div>
   );
 };

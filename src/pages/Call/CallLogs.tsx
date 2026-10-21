@@ -1,6 +1,7 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Table,
   Tag,
   Card,
   Statistic,
@@ -155,6 +156,8 @@ function AudioPlayer({ url }: { url: string }) {
 
 const CallLogs = () => {
   const { getCallHistoryApi } = useCallService();
+  const [listingSearch, setListingSearch] = useState('');
+  const [listingFilters, setListingFilters] = useState<Record<string, string>>({});
   const [calls, setCalls] = useState<Call[]>([]);
   const [stats, setStats] = useState<CallStats | null>(null);
   const [pagination, setPagination] = useState<Pagination>({
@@ -174,6 +177,7 @@ const CallLogs = () => {
   const isRecordingPage = loc.includes('recordings');
 
   useEffect(() => {
+    let active = true;
     const query: any = {
       page: tablePage,
       limit: tableLimit,
@@ -193,11 +197,13 @@ const CallLogs = () => {
       query.callSid = searchParams.get('callSid');
     }
 
+    if (listingSearch) query.callSid = listingSearch.trim();
+    if (listingFilters.status) query.status = listingFilters.status;
     setLoading(true);
 
     getCallHistoryApi(query)
       .then((res: any) => {
-        if (res?.data?.success) {
+        if (active && res?.data?.success) {
           setCalls(res.data.data.calls || []);
           setStats(res.data.data.stats || null);
           setPagination(
@@ -211,8 +217,9 @@ const CallLogs = () => {
         }
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [isRecordingPage, tableLimit, tablePage]);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [isRecordingPage, tableLimit, tablePage, searchParams, listingSearch, listingFilters]);
 
   const statsSummary = useMemo(() => {
     const statusStats = stats?.statusStats || [];
@@ -384,7 +391,21 @@ const CallLogs = () => {
         style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
         title={<span style={{ fontWeight: 700 }}>Call Logs</span>}
       >
-        <Table
+        <ListingTable listingTitle={isRecordingPage ? 'Recordings' : 'Call Logs'} fields={LISTING_FIELDS.calls} filterKeys={['status']} serverSide searchPlaceholder="Search exact Call SID" onFiltersChange={(search, filters) => { setListingSearch(search); setListingFilters(filters); setTablePage(1); }} loadExportRows={async () => {
+          const rows: Call[] = [];
+          let page = 1;
+          while (true) {
+            const query = { ...Object.fromEntries(searchParams), ...(isRecordingPage ? { onlyRecording: true } : {}), ...(listingSearch ? { callSid: listingSearch.trim() } : {}), ...(listingFilters.status ? { status: listingFilters.status } : {}), page, limit: 100 };
+            const res = await getCallHistoryApi(query);
+            if (!res.data?.success) throw new Error('Unable to load call records for export');
+            const batch: Call[] = res.data.data.calls ?? [];
+            rows.push(...batch);
+            const totalPages = res.data.data.pagination?.pages;
+            if ((totalPages != null && page >= totalPages) || !batch.length || (totalPages == null && batch.length < 100)) break;
+            page += 1;
+          }
+          return rows;
+        }}
           dataSource={calls}
           columns={columns}
           rowKey="_id"

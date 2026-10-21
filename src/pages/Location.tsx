@@ -1,4 +1,6 @@
-import { Button, Card, DatePicker, Space, Table, Tag } from 'antd';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
+import { Button, Card, DatePicker, Space, Tag } from 'antd';
 import { Locate } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -146,7 +148,7 @@ const Location = () => {
               <Map data={locationData} />
             </div>
           ) : (
-            <Table
+            <ListingTable listingTitle="Staff Locations" onRefresh={getStaffs} fields={LISTING_FIELDS.staff} filterKeys={["status","roleId"]}
               rowKey={(record) => record._id}
               columns={columns}
               dataSource={users}

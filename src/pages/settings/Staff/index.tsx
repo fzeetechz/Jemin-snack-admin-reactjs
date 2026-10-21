@@ -1,7 +1,9 @@
+import { fetchAllListingPages } from 'src/services/listingService';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Tag,
@@ -53,7 +55,7 @@ const StaffPage = () => {
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
 
   //  Services
-  const { getStaff, createStaff, updateStaff } = staffService();
+  const { createStaff, updateStaff } = staffService();
   const { getRoles } = roleService();
 
   // ✅ Dynamic roles (replace with API)
@@ -95,10 +97,7 @@ const StaffPage = () => {
 
   // Later: API call
   const getStaffs = async () => {
-    const res = (await getStaff()) as any;
-    if (res.success) {
-      setUsers((res.data.items ?? []).map(normalizeUser));
-    }
+    try { setUsers((await fetchAllListingPages<User>('/staff', 'items')).map(normalizeUser)); } catch { message.error('Unable to load staff'); }
   };
   useEffect(() => {
     const fetchRoles = async () => {
@@ -374,7 +373,7 @@ const StaffPage = () => {
           )
         }
       >
-        <Table
+        <ListingTable listingTitle="Staff" onRefresh={getStaffs} fields={LISTING_FIELDS.staff} filterKeys={["status","roleId","shiftId"]} importConfig={canCreate('settings.users') && listingImport('staff', getStaffs, (row) => roles.some((role) => role._id === row.roleId) ? [] : ['Role ID does not exist'])}
           rowKey={(record) => record._id}
           columns={columns}
           dataSource={users}

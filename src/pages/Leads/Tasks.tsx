@@ -1,6 +1,7 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import {
   Card,
-  Table,
   Button,
   Tag,
   Space,
@@ -24,7 +25,6 @@ import { apiRequest } from '../../services/api/apiClient';
 import { API_ENDPOINTS } from '../../services/api/endpoints';
 import {
   PlusOutlined,
-  SearchOutlined,
   MoreOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -73,9 +73,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
   const [loading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
-  const [searchText, setSearchText] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string | undefined>();
-  const [filterPriority, setFilterPriority] = useState<string | undefined>();
   const [staff, setStaffs] = useState([]);
   const [relatedType, setRelatedType] = useState<string>('Lead');
   const [leads, setLeads] = useState([]);
@@ -128,7 +125,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
   }, []);
   useEffect(() => {
     fetchTasks();
-  }, [lead, searchText, filterStatus, filterPriority]);
+  }, [lead]);
 
   const fetchTasks = async () => {
     if (lead) {
@@ -136,9 +133,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
       if (res.success) setTasks(res.data);
     } else {
       const params: any = {};
-      if (searchText) params.name = searchText;
-      if (filterStatus) params.status = filterStatus;
-      if (filterPriority) params.priority = filterPriority;
 
       const res: any = await getTasksList(params);
       if (res.success) setTasks(res.data);
@@ -215,6 +209,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
           style={{ width: 150 }}
           onChange={(value) => handleStatusChange(record._id, value)}
           size="small"
+          disabled={!canUpdate('tasks')}
         >
           {taskStatus?.value?.map((stat: any) => (
             <Select.Option key={stat.value} value={stat.value}>
@@ -278,7 +273,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
             trigger={['click']}
             disabled={items.length === 0}
           >
-            <Button type="text" icon={<MoreOutlined />} />
+            <Button icon={<MoreOutlined />} aria-label="Task actions">Actions</Button>
           </Dropdown>
         );
       },
@@ -441,40 +436,9 @@ const Tasks = ({ lead }: { lead?: any }) => {
         title="Tasks"
         loading={isLoading}
         style={{ borderRadius: 12 }}
-        bodyStyle={{ padding: 14 }}
+        styles={{ body: { padding: 14 } }}
         extra={
           <Space>
-            <Input
-              placeholder="Search tasks..."
-              prefix={<SearchOutlined />}
-              style={{ width: 200 }}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-
-            <Select
-              placeholder="Priority"
-              style={{ width: 120 }}
-              onChange={setFilterPriority}
-              allowClear
-            >
-              <Select.Option value="Low">Low</Select.Option>
-              <Select.Option value="Medium">Medium</Select.Option>
-              <Select.Option value="High">High</Select.Option>
-              <Select.Option value="Urgent">Urgent</Select.Option>
-            </Select>
-            <Select
-              placeholder="Status"
-              style={{ width: 140 }}
-              onChange={setFilterStatus}
-              allowClear
-            >
-              {taskStatus?.value?.map((stat: any) => (
-                <Select.Option key={stat.value} value={stat.value}>
-                  <Tag color={stat.color}>{stat.label}</Tag>
-                </Select.Option>
-              ))}
-            </Select>
             {canCreate('tasks') && (
               <Button
                 type="primary"
@@ -487,7 +451,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
           </Space>
         }
       >
-        <Table
+        <ListingTable listingTitle="Tasks" onRefresh={fetchTasks} fields={LISTING_FIELDS.tasks} filterKeys={["status","priority","assignee"]} importConfig={canCreate('tasks') && listingImport('tasks', fetchTasks)}
           columns={columns}
           dataSource={tasks}
           rowKey="_id"

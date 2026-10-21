@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -13,12 +15,13 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Tag,
   Typography,
   message,
+  Popconfirm,
+  Alert,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
@@ -97,8 +100,11 @@ const money = (n?: number) => {
 };
 
 const ContractPage = () => {
-  const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
+  const [contracts, setContracts] = useState<Contract[]>(() => { try { const stored = JSON.parse(localStorage.getItem('jemini_contracts') ?? 'null'); return Array.isArray(stored) ? stored : INITIAL_CONTRACTS; } catch { return INITIAL_CONTRACTS; } });
 
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  useEffect(() => { try { localStorage.setItem('jemini_contracts', JSON.stringify(contracts)); } catch { message.error('Unable to save contracts on this device'); } }, [contracts]);
+  const editContract = (row: Contract) => { setEditingContract(row); form.setFieldsValue({ ...row, start_date: dayjs(row.start_date), end_date: row.end_date ? dayjs(row.end_date) : undefined }); setDrawerOpen(true); };
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form] = Form.useForm<ContractFormValues>();
 
@@ -163,16 +169,12 @@ const ContractPage = () => {
       title: 'Actions',
       key: 'actions',
       width: 160,
-      render: () => (
-        <Space>
-          <Button size="small">View</Button>
-          <Button size="small">Edit</Button>
-        </Space>
-      ),
+      render: (_, row) => <Space><Button size="small" icon={<EditOutlined />} onClick={() => editContract(row)}>Edit</Button><Popconfirm title="Delete contract?" onConfirm={() => setContracts((items) => items.filter((item) => item.id !== row.id))} okButtonProps={{ danger: true }}><Button size="small" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm></Space>,
     },
   ];
 
   const openNewContract = () => {
+    setEditingContract(null);
     setDrawerOpen(true);
     form.resetFields();
     form.setFieldsValue({
@@ -185,6 +187,7 @@ const ContractPage = () => {
   };
 
   const closeDrawer = () => {
+    setEditingContract(null);
     setDrawerOpen(false);
     form.resetFields();
   };
@@ -202,7 +205,7 @@ const ContractPage = () => {
       ? dayjs(values.end_date).format('YYYY-MM-DD')
       : '';
 
-    const nextId = `CT-${1000 + contracts.length + 1}`;
+    const nextId = editingContract?.id ?? `CT-${crypto.randomUUID()}`;
 
     const newContract: Contract = {
       id: nextId,
@@ -218,11 +221,11 @@ const ContractPage = () => {
       description: values.description,
       is_trash: !!values.is_trash,
       hide_from_customer: !!values.hide_from_customer,
-      created_at: dayjs().format('YYYY-MM-DD'),
+      created_at: editingContract?.created_at ?? dayjs().format('YYYY-MM-DD'),
     };
 
-    setContracts([newContract, ...contracts]);
-    message.success('Contract added (static)');
+    setContracts((items) => editingContract ? items.map((item) => item.id === editingContract.id ? newContract : item) : [newContract, ...items]);
+    message.success(editingContract ? 'Contract updated' : 'Contract added');
     closeDrawer();
   };
 
@@ -242,8 +245,9 @@ const ContractPage = () => {
         </Button>
       </Flex>
 
+      <Alert type="info" showIcon message="Contracts are saved on this device." style={{ marginBottom: 16 }} />
       <Card>
-        <Table
+        <ListingTable listingTitle="Contracts" importConfig={{ fields: [{ key: 'customer_id', label: 'Customer ID', required: true, options: MOCK_CUSTOMERS.map((customer) => customer.value) }, { key: 'subject', label: 'Subject', required: true }, { key: 'contract_value', label: 'Value', type: 'number' }, { key: 'contract_type', label: 'Type', options: contractTypes }, { key: 'start_date', label: 'Start date', required: true, type: 'date' }, { key: 'end_date', label: 'End date', type: 'date' }, { key: 'description', label: 'Description' }, { key: 'hide_from_customer', label: 'Hidden', type: 'boolean' }, { key: 'is_trash', label: 'Trash', type: 'boolean' }], validate: (row) => row.end_date && String(row.end_date) < String(row.start_date) ? ['End date must be on or after start date'] : [], create: async (row) => { const contract = { ...row, id: 'CT-' + crypto.randomUUID(), customer_name: MOCK_CUSTOMERS.find((customer) => customer.value === row.customer_id)?.label ?? '', created_at: dayjs().format('YYYY-MM-DD') } as Contract; setContracts((items) => [contract, ...items]); return { success: true }; }, onComplete: () => {} }} fields={LISTING_FIELDS.contracts} filterKeys={["contract_type","hide_from_customer","is_trash"]}
           rowKey="id"
           columns={columns}
           dataSource={contracts}

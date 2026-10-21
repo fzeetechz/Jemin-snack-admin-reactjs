@@ -1,3 +1,5 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import {
   CalendarOutlined,
   EyeOutlined,
@@ -15,7 +17,6 @@ import {
   Row,
   Space,
   Statistic,
-  Table,
   Tag,
   Typography,
   message,
@@ -304,7 +305,7 @@ const SalarySlip = () => {
         {data && data.payslips.length === 0 ? (
           <Empty description="No active salary records found for this month." />
         ) : (
-          <Table
+          <ListingTable listingTitle="Payslips" fields={LISTING_FIELDS.payslips} filterKeys={["period.month","period.year"]}
             rowKey={(record) => record.employee._id}
             columns={columns}
             dataSource={data?.payslips ?? []}

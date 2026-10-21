@@ -1,10 +1,10 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { usePermissions } from 'src/hooks';
 import { useEffect, useState } from 'react';
 import {
-  Card,
   Tag,
   Row,
   Col,
-  Spin,
   Button,
   Modal,
   Form,
@@ -12,6 +12,7 @@ import {
   Space,
   message,
   Divider,
+  Popconfirm,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import configService from 'src/services/configService';
@@ -20,7 +21,8 @@ const ConfigManager = () => {
   const { getConfig, createConfig, updateConfig, deleteConfig } =
     configService();
 
-  const [configs, setConfigs] = useState([]);
+  const [configs, setConfigs] = useState<any[]>([]);
+  const { canCreate, canUpdate, canDelete } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<any>(null);
@@ -84,7 +86,6 @@ const ConfigManager = () => {
     }
   };
 
-  if (loading) return <Spin size="large" />;
 
   return (
     <div style={{ padding: 20 }}>
@@ -96,50 +97,18 @@ const ConfigManager = () => {
         }}
       >
         <h2>⚙️ Config Manager</h2>
-        <Button
+        {canCreate('settings') && <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => openModal()}
         >
           Add Config
-        </Button>
+        </Button>}
       </div>
 
-      <Row gutter={[16, 16]}>
-        {configs.map((config: any) => (
-          <Col xs={24} md={12} lg={8} key={config._id}>
-            <Card
-              title={config.key}
-              hoverable
-              style={{ borderRadius: 12 }}
-              extra={
-                <Space>
-                  <EditOutlined onClick={() => openModal(config)} />
-                  <DeleteOutlined onClick={() => handleDelete(config._id)} />
-                </Space>
-              }
-            >
-              <p style={{ color: '#888', marginBottom: 12 }}>
-                {config.description}
-              </p>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {config.value
-                  ?.sort((a: any, b: any) => a.order - b.order)
-                  .map((item: any, i: any) => (
-                    <Tag
-                      key={i}
-                      color={item.color}
-                      style={{ padding: '4px 10px', borderRadius: 6 }}
-                    >
-                      {item.label}
-                    </Tag>
-                  ))}
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+<ListingTable listingTitle="Configuration" fields={[{ key: 'key', label: 'Key' }, { key: 'description', label: 'Description' }, { key: 'value', label: 'Values' }]} dataSource={configs} rowKey="_id" loading={loading} onRefresh={fetchConfigs}
+        importConfig={canCreate('settings') && { fields: [{ key: 'key', label: 'Key', required: true, unique: true }, { key: 'description', label: 'Description' }, { key: 'value', label: 'Values JSON', required: true, type: 'json', example: '[{"value":"new","label":"New","color":"blue","order":1}]' }], create: createConfig, onComplete: fetchConfigs, validate: (row) => Array.isArray(row.value) && row.value.every((item) => item && typeof item.value === 'string' && typeof item.label === 'string') ? [] : ['Values must be an array with value and label strings'] }}
+        columns={[{ title: 'Key', dataIndex: 'key' }, { title: 'Description', dataIndex: 'description' }, { title: 'Values', render: (_, row) => <Space wrap>{[...(row.value ?? [])].sort((a, b) => a.order - b.order).map((item, index) => <Tag key={index} color={item.color}>{item.label}</Tag>)}</Space> }, { title: 'Actions', render: (_, row) => <Space>{canUpdate('settings') && <Button icon={<EditOutlined />} onClick={() => openModal(row)}>Edit</Button>}{canDelete('settings') && <Popconfirm title="Delete configuration?" onConfirm={() => handleDelete(row._id)} okButtonProps={{ danger: true }}><Button danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>}</Space> }]} />
 
       <Modal
         title={editingConfig ? '✏️ Edit Config' : '➕ Create Config'}

@@ -1,7 +1,8 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Tag,
@@ -376,7 +377,7 @@ const RolesPage = () => {
           )
         }
       >
-        <Table
+        <ListingTable listingTitle="Roles" onRefresh={getAllRoles} fields={LISTING_FIELDS.roles} filterKeys={["isSystem"]} importConfig={canCreate('settings.roles') && listingImport('roles', getAllRoles)}
           rowKey={(record) => record._id || record.id || record.name}
           columns={columns}
           dataSource={roles}

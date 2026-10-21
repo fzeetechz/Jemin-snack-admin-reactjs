@@ -1,3 +1,6 @@
+import { fetchAllListingPages } from 'src/services/listingService';
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
@@ -14,7 +17,6 @@ import {
   Select,
   Space,
   Spin,
-  Table,
   Tag,
   TimePicker,
   Typography,
@@ -194,7 +196,7 @@ const parseShiftTime = (value?: string) => {
 
 const Attendance = () => {
   const [form] = Form.useForm<AttendanceFormValues>();
-  const { getAttendanceList, updateAttendance, deleteAttendance } =
+  const { updateAttendance, deleteAttendance } =
     attendanceService();
 
   const { canUpdate, canDelete, canRead } = usePermissions();
@@ -236,12 +238,7 @@ const Attendance = () => {
         params.endDate = dateRange[1].format('YYYY-MM-DD');
       }
 
-      const response = (await getAttendanceList(params)) as {
-        success?: boolean;
-        data?: { items?: ApiAttendanceRecord[] };
-      };
-
-      const items = response?.data?.items ?? [];
+      const items = await fetchAllListingPages<ApiAttendanceRecord>('/attendance', 'items', params);
       const mappedRecords = items.map((item) => {
         const employee = item.employeeId;
         const shiftStart = item.shift?.start?.trim() || '-';
@@ -815,7 +812,7 @@ const Attendance = () => {
 
         <Card bordered={false}>
           <Spin spinning={loading}>
-            <Table
+            <ListingTable listingTitle="Attendance" fields={LISTING_FIELDS.attendance} filterKeys={["status","department","designation"]}
               rowKey="id"
               columns={columns}
               dataSource={filteredRecords}

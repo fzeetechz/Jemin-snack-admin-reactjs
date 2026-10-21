@@ -1,6 +1,7 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
-  Table,
   Button,
   Modal,
   Form,
@@ -120,7 +121,7 @@ const Candidate = () => {
       render: (_: any, record: any) => (
         <Space>
           {canRead('candidates') && (
-            <Button disabled={!_._id} size="small" type="primary">
+            <Button disabled={!record._id} size="small" type="primary">
               <Link to={`/hrms/candidate/${record?._id}`}>View</Link>
             </Button>
           )}
@@ -135,10 +136,11 @@ const Candidate = () => {
           >
             {canDelete('candidates') && (
               <Button
-                onClick={() => setSelectedUser(_)}
+                onClick={() => setSelectedUser(record)}
                 disabled={!_._id}
                 size="small"
-                type="primary"
+                danger
+                aria-label="Delete candidate"
               >
                 <Trash size={15} />
               </Button>
@@ -163,7 +165,7 @@ const Candidate = () => {
         </Button>
       )}
 
-      <Table rowHoverable={false} columns={columns} dataSource={candidates} />
+      <ListingTable listingTitle="Candidates" rowKey="_id" onRefresh={fetchData} fields={LISTING_FIELDS.candidates} filterKeys={["status","designation","source"]} importConfig={canCreate('candidates') && listingImport('candidates', fetchData)} rowHoverable={false} columns={columns} dataSource={candidates} />
 
       {/* Modal */}
       <Modal

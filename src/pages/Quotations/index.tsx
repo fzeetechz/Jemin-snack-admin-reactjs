@@ -1,3 +1,5 @@
+import ListingTable from 'src/components/shared/listing/ListingTable';
+import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import {
@@ -18,7 +20,6 @@ import {
   Select,
   Space,
   Spin,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -26,6 +27,7 @@ import {
 import {
   DeleteOutlined,
   EyeOutlined,
+  EditOutlined,
   FilePdfOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -115,7 +117,7 @@ const QuotationsPage = () => {
   const total = subtotal + tax - discount;
 
   const { getProducts } = useProducts();
-  const { canCreate } = usePermissions();
+  const { canCreate, canUpdate } = usePermissions();
 
   const fetchQuotations = async () => {
     try {
@@ -233,15 +235,7 @@ const QuotationsPage = () => {
     }
   };
 
-  // const openEditDrawer = (quotation: any) => {
-  //   setEditingQuotation(quotation);
-  //   setEditDrawerOpen(true);
-  //   editForm.setFieldsValue({
-  //     tax: quotation.tax ?? 0,
-  //     discount: quotation.discount ?? 0,
-  //   });
-  //   setBillTo(quotation.billTo ?? EMPTY_BILL);
-  // };
+  const openEditDrawer = (quotation: any) => { setEditingQuotation(quotation); setEditDrawerOpen(true); editForm.setFieldsValue({ tax: quotation.tax ?? 0, discount: quotation.discount ?? 0 }); setBillTo(quotation.billTo ?? EMPTY_BILL); };
 
   const closeEditDrawer = () => {
     setEditDrawerOpen(false);
@@ -398,7 +392,7 @@ const QuotationsPage = () => {
           <Select
             size="small"
             value={status || 'PENDING'}
-            disabled={statusUpdating === row._id}
+            disabled={statusUpdating === row._id || !canUpdate('quotations')}
             style={{ width: 120 }}
             options={STATUS_OPTIONS.map((o) => ({
               ...o,
@@ -414,13 +408,7 @@ const QuotationsPage = () => {
       key: 'actions',
       render: (_: any, row: any) => (
         <Space>
-          {/* <Tooltip title="Edit">
-            <Button
-              type="text"
-              icon={<EditOutlined style={{ color: '#1677ff' }} />}
-              onClick={() => openEditDrawer(row)}
-            />
-          </Tooltip> */}
+          {canUpdate('quotations') && <Button icon={<EditOutlined />} onClick={() => openEditDrawer(row)}>Edit</Button>}
           <Tooltip title="View">
             <Button
               type="text"
@@ -470,7 +458,7 @@ const QuotationsPage = () => {
       </Flex>
 
       <Card>
-        <Table
+        <ListingTable listingTitle="Quotations" fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
           rowKey="_id"
           columns={columns}
           dataSource={quotations}
