@@ -1,8 +1,10 @@
+import { Plus as PlusOutlined, Trash2 as DeleteOutlined, PencilLine as EditOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { usePermissions } from 'src/hooks';
 import { useEffect, useState } from 'react';
 import {
   Tag,
+  Card,
   Row,
   Col,
   Button,
@@ -14,7 +16,7 @@ import {
   Divider,
   Popconfirm,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+
 import configService from 'src/services/configService';
 
 const ConfigManager = () => {
@@ -88,7 +90,7 @@ const ConfigManager = () => {
 
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="module-page">
       <div
         style={{
           display: 'flex',
@@ -96,7 +98,7 @@ const ConfigManager = () => {
           marginBottom: 20,
         }}
       >
-        <h2>⚙️ Config Manager</h2>
+        <h2 style={{ margin: 0 }}>Configurations</h2>
         {canCreate('settings') && <Button
           type="primary"
           icon={<PlusOutlined />}

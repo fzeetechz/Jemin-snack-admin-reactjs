@@ -1,3 +1,4 @@
+import { Trash2 as DeleteOutlined, PencilLine as EditOutlined, Eye as EyeOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
@@ -22,16 +23,7 @@ import {
   Typography,
   message,
 } from 'antd';
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  TeamOutlined,
-  UserOutlined,
-  BranchesOutlined,
-} from '@ant-design/icons';
+import { TeamOutlined, UserOutlined, BranchesOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import useCustomerService from 'src/services/useCustomerService';
 import { usePermissions } from 'src/hooks';
@@ -357,7 +349,7 @@ const CustomersPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="module-page">
       <Space
         direction="vertical"
         size={20}

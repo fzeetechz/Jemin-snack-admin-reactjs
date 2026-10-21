@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, PencilLine as EditOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
@@ -14,12 +15,7 @@ import {
   message,
   Modal,
 } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  CheckOutlined,
-  StopOutlined,
-} from '@ant-design/icons';
+import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import staffService from '../../../services/staffService';
 import roleService from '../../../services/roleService';
 import { usePermissions } from '../../../hooks';
@@ -350,7 +346,7 @@ const StaffPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="module-page">
       {isModalOpen && (
         <ImageModal
           imageUrl={ProfileWithPlaceholder(selectedStaff)}

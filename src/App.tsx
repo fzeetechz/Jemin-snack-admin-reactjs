@@ -6,7 +6,8 @@ import { StylesContext } from './context';
 import routes from './routes/routes.tsx';
 import { useSelector } from 'react-redux';
 import { RootState } from './redux/store';
-import { PRIMARY_COLOR } from './theme/colors';
+import { useEffect } from 'react';
+import { getComponentTheme } from './theme/config';
 import './App.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -29,33 +30,17 @@ export const COLOR = {
 function App() {
   const { mytheme } = useSelector((state: RootState) => state.theme);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = mytheme;
+    document.documentElement.style.colorScheme =
+      mytheme === 'dark' ? 'dark' : 'light';
+  }, [mytheme]);
+
   return (
     <HelmetProvider>
       <ConfigProvider
         theme={{
-          token: {
-            colorPrimary: PRIMARY_COLOR,
-            borderRadius: 6,
-            fontFamily: 'Lato, sans-serif',
-          },
-          components: {
-            Calendar: {
-              colorBgContainer: 'none',
-            },
-            Carousel: {
-              dotWidth: 8,
-            },
-            Table: {
-              colorBgContainer: 'none',
-              headerBg: 'none',
-            },
-            Timeline: {
-              dotBg: 'none',
-            },
-            Typography: {
-              linkHoverDecoration: 'underline',
-            },
-          },
+          ...getComponentTheme(mytheme === 'dark'),
           algorithm:
             mytheme === 'dark'
               ? antdTheme.darkAlgorithm

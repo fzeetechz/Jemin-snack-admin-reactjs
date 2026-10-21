@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined, Eye as EyeOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
@@ -19,14 +20,7 @@ import {
   message,
   Upload,
 } from 'antd';
-import {
-  PlusOutlined,
-  PhoneOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
+import { PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { UserAvatar } from '../../components';

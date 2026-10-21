@@ -87,6 +87,7 @@ export const SignInPage = () => {
 
   return (
     <Row
+      className="auth-page"
       style={{
         minHeight: isMobile ? 'auto' : '100vh',
         overflow: 'hidden',
@@ -108,6 +109,7 @@ export const SignInPage = () => {
       <AuthLeft />
       {/* <Col xs={24} lg={12}>
         <Flex
+          className="auth-form-panel"
           vertical
           align="center"
           justify="center"
@@ -126,6 +128,7 @@ export const SignInPage = () => {
       </Col> */}
       <Col xs={24} lg={12}>
         <Flex
+          className="auth-form-panel"
           vertical
           align={isMobile ? 'center' : 'flex-start'}
           justify="center"
@@ -136,7 +139,8 @@ export const SignInPage = () => {
             background: colorBgContainer,
           }}
         >
-          <Title className="m-0">Login</Title>
+          <Title className="m-0">Welcome back</Title>
+          <span className="auth-form-description">Sign in to your Jemini Snacks workspace.</span>
           {/* <Flex gap={4}>
             <Text>Don't have an account?</Text>
             <Link href={PATH_AUTH.signup}>Create an account here</Link>

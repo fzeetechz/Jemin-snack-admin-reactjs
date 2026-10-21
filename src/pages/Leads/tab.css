@@ -1,13 +1,13 @@
-.ant-tabs-nav {
+.lead-detail-tabs .ant-tabs-nav {
   margin: 0 !important;
 }
-.ant-tabs-tab {
+.lead-detail-tabs .ant-tabs-tab {
   padding: 8px 14px !important;
   border-radius: 8px !important;
 }
-.ant-tabs-tab-active {
-  background: #ffffff !important;
+.lead-detail-tabs .ant-tabs-tab-active {
+  background: var(--surface) !important;
 }
-.ant-tabs-ink-bar {
+.lead-detail-tabs .ant-tabs-ink-bar {
   display: none !important;
 }

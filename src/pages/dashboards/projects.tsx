@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined } from 'lucide-react';
 import { Alert, Button, Col, Row, Segmented, Space } from 'antd';
 import {
   Card,
@@ -11,12 +12,7 @@ import {
 import { Column } from '@ant-design/charts';
 import { Projects, Clients } from '../../types';
 import { useState } from 'react';
-import {
-  CloudUploadOutlined,
-  HomeOutlined,
-  PieChartOutlined,
-  PlusOutlined,
-} from '@ant-design/icons';
+import { CloudUploadOutlined, HomeOutlined, PieChartOutlined } from '@ant-design/icons';
 import { DASHBOARD_ITEMS } from '../../constants';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';

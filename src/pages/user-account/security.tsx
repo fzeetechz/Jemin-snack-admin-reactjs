@@ -1,3 +1,4 @@
+import { Save as SaveOutlined } from 'lucide-react';
 import {
   Alert,
   Badge,
@@ -13,12 +14,7 @@ import {
 import { useStylesContext } from '../../context';
 import { Card, Flex, Loader } from '../../components';
 import { Session } from '../../types';
-import {
-  LaptopOutlined,
-  MobileOutlined,
-  SaveOutlined,
-  TabletOutlined,
-} from '@ant-design/icons';
+import { LaptopOutlined, MobileOutlined, TabletOutlined } from '@ant-design/icons';
 import { useFetchData } from '../../hooks';
 
 const { Text } = Typography;

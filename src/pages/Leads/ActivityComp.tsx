@@ -1,3 +1,4 @@
+import { X as CloseOutlined, Trash2 as DeleteOutlined, Plus as PlusOutlined, Search as SearchOutlined } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
@@ -22,21 +23,7 @@ import {
   Typography,
   Upload,
 } from 'antd';
-import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
-  ClockCircleOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  FilePdfOutlined,
-  MinusOutlined,
-  PictureOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  SendOutlined,
-  ShoppingCartOutlined,
-  ShoppingOutlined,
-} from '@ant-design/icons';
+import { ArrowDownOutlined, ArrowUpOutlined, ClockCircleOutlined, FilePdfOutlined, MinusOutlined, PictureOutlined, SendOutlined, ShoppingCartOutlined, ShoppingOutlined } from '@ant-design/icons';
 import activityLogservices from '../../services/activityService';
 import { getAttachmentUrl } from '../../utils/convertor';
 import useProducts from '../../services/useProducts';

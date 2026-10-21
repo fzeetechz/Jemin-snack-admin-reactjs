@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, Save as SaveOutlined } from 'lucide-react';
 import {
   Button,
   Checkbox,
@@ -10,11 +11,7 @@ import {
   Select,
 } from 'antd';
 import { Card } from '../../components';
-import {
-  MinusCircleOutlined,
-  PlusOutlined,
-  SaveOutlined,
-} from '@ant-design/icons';
+import { MinusCircleOutlined } from '@ant-design/icons';
 import { useStylesContext } from '../../context';
 import dayjs from 'dayjs';
 

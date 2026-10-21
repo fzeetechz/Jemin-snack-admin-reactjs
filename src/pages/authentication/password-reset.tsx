@@ -1,3 +1,4 @@
+import { ArrowLeft as ArrowLeftOutlined } from 'lucide-react';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import {
   Button,
@@ -14,12 +15,8 @@ import {
   Space,
   Spin,
 } from 'antd';
-import {
-  MoonOutlined,
-  SunOutlined,
-  ArrowLeftOutlined,
-} from '@ant-design/icons';
-import { Logo } from '../../components';
+import { MoonOutlined, SunOutlined } from '@ant-design/icons';
+import AuthLeft from '../../components/auth/AuthLeft';
 import { useMediaQuery } from 'react-responsive';
 import { PATH_AUTH } from '../../constants';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +24,6 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleTheme } from '../../redux/theme/themeSlice';
 import { RootState } from '../../redux/store';
-import { STRINGS } from '../../assets';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
@@ -41,7 +37,7 @@ type FieldType = {
 
 export const PasswordResetPage = () => {
   const {
-    token: { colorPrimary, colorBgContainer },
+    token: { colorBgContainer },
   } = theme.useToken();
   const isMobile = useMediaQuery({ maxWidth: 769 });
   const navigate = useNavigate();
@@ -130,6 +126,7 @@ export const PasswordResetPage = () => {
 
   return (
     <Row
+      className="auth-page"
       style={{
         minHeight: isMobile ? 'auto' : '100vh',
         overflow: 'hidden',
@@ -148,26 +145,10 @@ export const PasswordResetPage = () => {
           />
         </Tooltip>
       </div>
+      <AuthLeft />
       <Col xs={24} lg={12}>
         <Flex
-          vertical
-          align="center"
-          justify="center"
-          className="text-center"
-          style={{ background: colorPrimary, height: '100%', padding: '1rem' }}
-        >
-          <Logo color="white" />
-          <Title level={2} className="text-white">
-            Welcome back to {STRINGS.PROJECT.NAME}
-          </Title>
-          <Text className="text-white" style={{ fontSize: 18 }}>
-            A dynamic and versatile multipurpose dashboard utilizing Ant Design,
-            React, TypeScript, and Vite.
-          </Text>
-        </Flex>
-      </Col>
-      <Col xs={24} lg={12}>
-        <Flex
+          className="auth-form-panel"
           vertical
           align={isMobile ? 'center' : 'flex-start'}
           justify="center"

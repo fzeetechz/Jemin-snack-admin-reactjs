@@ -1,70 +1,68 @@
+import './workspace.css';
 import {
+  Avatar,
   Button,
   Dropdown,
   Flex,
   FloatButton,
   Layout,
-  MenuProps,
   message,
-  theme,
   Tooltip,
 } from 'antd';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+  ChevronDown,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  UserRound,
+  X,
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import {
   CSSTransition,
   SwitchTransition,
   TransitionGroup,
 } from 'react-transition-group';
 import { useMediaQuery } from 'react-responsive';
-import SideNav from './side-nav.tsx';
-import HeaderNav from './header-nav.tsx';
-import FooterNav from './footer-nav.tsx';
+import SideNav from './side-nav';
+import HeaderNav from './header-nav';
+import FooterNav from './footer-nav';
+import { getPageMeta } from './page-meta';
 import { NProgress, LoginModal } from '../../components';
 import { PATH_AUTH, PATH_USER_PROFILE } from '../../constants';
+import { useAuth } from '../../contexts/AuthContext';
+import { imageUrl } from '../../utils/convertor';
+import type { ReactNode } from 'react';
+import type { MenuProps } from 'antd';
 
-// import { logoutUser } from '../../redux/auth/authSlice';
-// import { enableMockData } from '../../redux/data-mode/dataModeSlice';
-// import { RootState } from '../../redux/store.ts';
-import { useAuth } from '../../contexts/AuthContext.tsx';
-import { imageUrl } from 'src/utils/convertor.ts';
-// import { imageUrl } from 'src/utils/convertor.ts';
-// import { authService } from 'src/services/auth/authService.ts';
 const { Content } = Layout;
 
-type AppLayoutProps = {
-  children: ReactNode;
-};
-
-export const AppLayout = ({ children }: AppLayoutProps) => {
-  const {
-    token: { borderRadius, colorBgContainer },
-  } = theme.useToken();
+export const AppLayout = ({ children }: { children: ReactNode }) => {
   const isMobile = useMediaQuery({ maxWidth: 769 });
   const [collapsed, setCollapsed] = useState(true);
-  const [navFill, setNavFill] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const nodeRef = useRef(null);
   const floatBtnRef = useRef(null);
-
   const { logout, user } = useAuth();
-  const [_user, _setUser] = useState<any>(null);
+  const page = getPageMeta(location.pathname);
+  const PageIcon = page.icon;
+  const fullName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    user?.email ||
+    'My account';
+  const initials = fullName
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+  const sidebarOffset = !collapsed && !isMobile ? 248 : 0;
 
   const handleLogout = async () => {
-    message.open({
-      type: 'loading',
-      content: 'signing you out',
-    });
-
-    // If authenticated, logout from API
+    message.open({ type: 'loading', content: 'Signing you out' });
     await logout();
     message.destroy();
     navigate(PATH_AUTH.signin, { replace: true });
@@ -73,18 +71,15 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   const items: MenuProps['items'] = [
     {
       key: 'user-profile-link',
-      label: 'profile',
-      icon: <UserOutlined />,
+      label: 'My profile',
+      icon: <UserRound size={16} />,
       onClick: () => navigate(PATH_USER_PROFILE.details),
     },
-
-    {
-      type: 'divider',
-    },
+    { type: 'divider' },
     {
       key: 'user-logout-link',
-      label: 'logout',
-      icon: <LogoutOutlined />,
+      label: 'Sign out',
+      icon: <LogOut size={16} />,
       danger: true,
       onClick: handleLogout,
     },
@@ -94,124 +89,114 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     setCollapsed(isMobile);
   }, [isMobile]);
 
-  useEffect(() => {
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 5) {
-        setNavFill(true);
-      } else {
-        setNavFill(false);
-      }
-    });
-  }, []);
-
   return (
     <>
       <NProgress isAnimating={isLoading} key={location.key} />
-      <Layout
-        style={{
-          minHeight: '100vh',
-          // backgroundColor: 'white',
-        }}
-      >
+      <Layout className="workspace-layout">
+        {isMobile && !collapsed && (
+          <button
+            className="sidebar-backdrop"
+            aria-label="Close sidebar"
+            onClick={() => setCollapsed(true)}
+          />
+        )}
         <SideNav
           trigger={null}
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
-          style={{
-            overflow: 'auto',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            background: 'none',
-            border: 'none',
-            transition: 'all .2s',
-          }}
+          style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 }}
         />
+        {isMobile && !collapsed && (
+          <Button
+            className="sidebar-mobile-close"
+            type="text"
+            icon={<X size={20} />}
+            aria-label="Close sidebar"
+            onClick={() => setCollapsed(true)}
+          />
+        )}
         <Layout
-          style={
-            {
-              // background: 'none',
-            }
-          }
+          className="workspace-main"
+          style={{ marginLeft: sidebarOffset }}
         >
-          <HeaderNav
-            style={{
-              marginLeft: collapsed ? 0 : '200px',
-              padding: '0 2rem 0 0',
-              background: navFill ? `${colorBgContainer}80` : 'none',
-              backdropFilter: navFill ? 'blur(8px)' : 'none',
-              boxShadow: navFill ? '0 0 8px 2px rgba(0, 0, 0, 0.05)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              position: 'sticky',
-              top: 0,
-              zIndex: 1,
-              gap: 8,
-              transition: 'all .25s',
-            }}
-          >
-            <Flex align="center">
-              <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} Sidebar`}>
+          <HeaderNav className="workspace-header">
+            <Flex align="center" gap={16} className="workspace-header-start">
+              <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} sidebar`}>
                 <Button
                   type="text"
+                  className="sidebar-toggle"
+                  aria-label={`${collapsed ? 'Expand' : 'Collapse'} sidebar`}
+                  aria-expanded={!collapsed}
                   icon={
-                    collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
+                    collapsed ? (
+                      <Menu size={21} />
+                    ) : (
+                      <PanelLeftClose size={21} />
+                    )
                   }
                   onClick={() => setCollapsed(!collapsed)}
-                  style={{
-                    fontSize: '16px',
-                    width: 64,
-                    height: 64,
-                  }}
                 />
               </Tooltip>
+              <span className="header-separator" />
+              <span className="header-page-icon">
+                <PageIcon size={19} strokeWidth={1.8} />
+              </span>
+              <div className="header-page-label">
+                <span>{page.section}</span>
+                <strong>{page.title}</strong>
+              </div>
             </Flex>
-            <Flex align="center" gap="small">
-              <Dropdown menu={{ items }} trigger={['click']}>
-                <Flex>
-                  {user && (
-                    <img
-                      src={imageUrl(user?.avatar)}
-                      alt="user profile photo"
-                      height={36}
-                      width={36}
-                      style={{ borderRadius, objectFit: 'cover' }}
-                    />
-                  )}
-                </Flex>
+            <Flex align="center" gap={20}>
+              <span className="header-date">
+                {new Intl.DateTimeFormat('en-IN', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                }).format(new Date())}
+              </span>
+              <Dropdown
+                menu={{ items }}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <button
+                  className="header-profile"
+                  aria-label="Open account menu"
+                >
+                  <Avatar
+                    size={37}
+                    src={user?.avatar ? imageUrl(user.avatar) : undefined}
+                  >
+                    {initials}
+                  </Avatar>
+                  <span className="header-profile-copy">
+                    <strong>{fullName}</strong>
+                    <span>My account</span>
+                  </span>
+                  <ChevronDown size={14} aria-hidden="true" />
+                </button>
               </Dropdown>
             </Flex>
           </HeaderNav>
-          <Content
-            style={{
-              margin: `0 0 0 ${collapsed ? 0 : '200px'}`,
-              // background: '#ebedf0',
-              borderRadius: collapsed ? 0 : borderRadius,
-              transition: 'all .25s',
-              padding: '24px 32px',
-              minHeight: 360,
-            }}
-          >
+          <Content className="workspace-content">
             <TransitionGroup>
               <SwitchTransition>
                 <CSSTransition
                   key={`css-transition-${location.key}`}
                   nodeRef={nodeRef}
-                  onEnter={() => {
-                    setIsLoading(true);
-                  }}
-                  onEntered={() => {
-                    setIsLoading(false);
-                  }}
-                  timeout={300}
+                  onEnter={() => setIsLoading(true)}
+                  onEntered={() => setIsLoading(false)}
+                  timeout={250}
                   classNames="bottom-to-top"
                   unmountOnExit
                 >
                   {() => (
-                    <div ref={nodeRef} style={{ background: 'none' }}>
+                    <div
+                      ref={nodeRef}
+                      className="workspace-page"
+                      data-page={location.pathname}
+                    >
                       {children}
                     </div>
                   )}
@@ -222,13 +207,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               <FloatButton.BackTop />
             </div>
           </Content>
-          <FooterNav
-            style={{
-              textAlign: 'center',
-              marginLeft: collapsed ? 0 : '200px',
-              background: 'none',
-            }}
-          />
+          <FooterNav className="workspace-footer" />
         </Layout>
       </Layout>
       <LoginModal />

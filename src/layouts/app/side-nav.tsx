@@ -1,22 +1,29 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ConfigProvider, Layout, Menu, MenuProps, SiderProps } from 'antd';
 import {
-  AppstoreOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
-  CustomerServiceOutlined,
-  FileTextOutlined,
-  HistoryOutlined,
-  PhoneOutlined,
-  ProductOutlined,
-  SettingOutlined,
-  SolutionOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+  LayoutDashboard,
+  CalendarDays,
+  ContactRound,
+  Phone,
+  Package,
+  Receipt,
+  MapPin,
+  CalendarCheck2,
+  Wallet,
+  FileCheck2,
+  UserRoundSearch,
+  Settings2,
+  UsersRound,
+  ShieldCheck,
+  SlidersHorizontal,
+  Headphones,
+  AudioLines,
+  Building2,
+  ChevronRight,
+} from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
-import { getThemeColors } from '../../theme/colors';
 import { Logo } from '../../components';
 import {
   PATH_CRM,
@@ -26,7 +33,6 @@ import {
 } from '../../config/permissions';
 
 import { usePermissions } from '../../hooks/usePermissions';
-import { LocationEditIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { Sider } = Layout;
@@ -48,7 +54,7 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
   getItem(
     <Link to={PATH_CRM.dashboard}>Dashboard</Link>,
     PATH_CRM.dashboard,
-    <AppstoreOutlined />
+    <LayoutDashboard size={19} strokeWidth={1.8} />
   ),
 
   getItem('Sales', 'group-sales', null, [], 'group'),
@@ -56,88 +62,109 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
   getItem(
     <Link to={PATH_CRM.leads}>Leads</Link>,
     PATH_CRM.leads,
-    <SolutionOutlined />
+    <ContactRound size={19} strokeWidth={1.8} />
   ),
 
-  getItem('Activities', 'submenu-activities', <CalendarOutlined />, [
-    getItem(
-      <Link to={PATH_CRM.activities.leads}>Leads</Link>,
-      PATH_CRM.activities.leads
-    ),
-    getItem(<Link to={PATH_CRM.customers}>Customers</Link>, PATH_CRM.customers),
-  ]),
+  getItem(
+    'Activities',
+    'submenu-activities',
+    <CalendarDays size={19} strokeWidth={1.8} />,
+    [
+      getItem(
+        <Link to={PATH_CRM.activities.leads}>Leads</Link>,
+        PATH_CRM.activities.leads,
+        <ContactRound size={17} strokeWidth={1.8} />
+      ),
+      getItem(
+        <Link to={PATH_CRM.customers}>Customers</Link>,
+        PATH_CRM.customers,
+        <UsersRound size={17} strokeWidth={1.8} />
+      ),
+    ]
+  ),
 
-  getItem('Calls', 'submenu-calls', <PhoneOutlined />, [
-    getItem(<Link to={PATH_CRM.calls}>Call Logs</Link>, PATH_CRM.calls),
+  getItem('Calls', 'submenu-calls', <Phone size={19} strokeWidth={1.8} />, [
+    getItem(
+      <Link to={PATH_CRM.calls}>Call Logs</Link>,
+      PATH_CRM.calls,
+      <Phone size={17} strokeWidth={1.8} />
+    ),
     getItem(
       <Link to={PATH_CRM.recordings}>Recordings</Link>,
-      PATH_CRM.recordings
+      PATH_CRM.recordings,
+      <AudioLines size={17} strokeWidth={1.8} />
     ),
   ]),
 
   getItem(
     <Link to={PATH_CRM.products}>Products</Link>,
     PATH_CRM.products,
-    <ProductOutlined />
+    <Package size={19} strokeWidth={1.8} />
   ),
 
   getItem(
     <Link to={PATH_CRM.quotations}>Orders</Link>,
     PATH_CRM.quotations,
-    <FileTextOutlined />
+    <Receipt size={19} strokeWidth={1.8} />
   ),
 
   getItem(
     <Link to={PATH_CRM.locations}>Location</Link>,
     PATH_CRM.locations,
-    <LocationEditIcon />
+    <MapPin size={19} strokeWidth={1.8} />
   ),
 
   getItem('Human Resource', 'group-ops', null, [], 'group'),
   //  getItem(
   //   <Link to={PATH_CRM.customers}>Customers</Link>,
   //   PATH_CRM.customers,
-  //   <HistoryOutlined />
+  //   <CalendarCheck2 size={19} strokeWidth={1.8} />
   // ),  //  getItem(
   //   <Link to={PATH_CRM.customers}>Customers</Link>,
   //   PATH_CRM.customers,
-  //   <HistoryOutlined />
+  //   <CalendarCheck2 size={19} strokeWidth={1.8} />
   // ),
   getItem(
     <Link to={PATH_CRM.hr.Attendance}>Attendance</Link>,
     PATH_CRM.hr.Attendance,
-    <HistoryOutlined />
+    <CalendarCheck2 size={19} strokeWidth={1.8} />
   ),
   getItem(
     <Link to={PATH_CRM.hr.leave}>Leaves</Link>,
     PATH_CRM.hr.leave,
-    <HistoryOutlined />
+    <CalendarDays size={19} strokeWidth={1.8} />
   ),
   getItem(
     <Link to={PATH_CRM.hr.salarySetting}>Salary Setting</Link>,
     PATH_CRM.hr.salarySetting,
-    <SettingOutlined />
+    <Wallet size={19} strokeWidth={1.8} />
   ),
   getItem(
     <Link to={PATH_CRM.hr.payslip}>Pay Slip</Link>,
     PATH_CRM.hr.payslip,
-    <SettingOutlined />
+    <FileCheck2 size={19} strokeWidth={1.8} />
   ),
 
   //candidate
-  getItem('Candidates', 'submenu-candidate', <BarChartOutlined />, [
-    getItem(
-      <Link to={PATH_CRM.hr.candidate}>Candidates</Link>,
-      PATH_CRM.hr.candidate
-    ),
-  ]),
+  getItem(
+    'Candidates',
+    'submenu-candidate',
+    <UserRoundSearch size={19} strokeWidth={1.8} />,
+    [
+      getItem(
+        <Link to={PATH_CRM.hr.candidate}>Candidates</Link>,
+        PATH_CRM.hr.candidate,
+        <UserRoundSearch size={17} strokeWidth={1.8} />
+      ),
+    ]
+  ),
   getItem(
     <Link to={PATH_CRM.hr.Settings}>Configuration</Link>,
     PATH_CRM.hr.Settings,
-    <SettingOutlined />
+    <Building2 size={19} strokeWidth={1.8} />
   ),
 
-  // getItem('Reports', 'submenu-reports', <BarChartOutlined />, [
+  // getItem('Reports', 'submenu-reports', <UserRoundSearch size={19} strokeWidth={1.8} />, [
   //   getItem(
   //     <Link to={PATH_CRM.reports.overview}>Overview</Link>,
   //     PATH_CRM.reports.overview
@@ -154,28 +181,33 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
 
   getItem('Admin', 'group-admin', null, [], 'group'),
 
-  getItem('Settings', 'submenu-settings', <SettingOutlined />, [
-    getItem(
-      <Link to={PATH_CRM.settings.users}>Staff</Link>,
-      PATH_CRM.settings.users,
-      <UserOutlined />
-    ),
-    getItem(
-      <Link to={PATH_CRM.settings.roles}>Roles & Permissions</Link>,
-      PATH_CRM.settings.roles,
-      <SettingOutlined />
-    ),
-  ]),
+  getItem(
+    'Settings',
+    'submenu-settings',
+    <Settings2 size={19} strokeWidth={1.8} />,
+    [
+      getItem(
+        <Link to={PATH_CRM.settings.users}>Staff</Link>,
+        PATH_CRM.settings.users,
+        <UsersRound size={19} strokeWidth={1.8} />
+      ),
+      getItem(
+        <Link to={PATH_CRM.settings.roles}>Roles & Permissions</Link>,
+        PATH_CRM.settings.roles,
+        <ShieldCheck size={19} strokeWidth={1.8} />
+      ),
+    ]
+  ),
 
   getItem(
     <Link to={PATH_CRM.config}>Configurations</Link>,
     PATH_CRM.config,
-    <CustomerServiceOutlined />
+    <SlidersHorizontal size={19} strokeWidth={1.8} />
   ),
   getItem(
     <Link to={PATH_CRM.support}>Support</Link>,
     PATH_CRM.support,
-    <CustomerServiceOutlined />
+    <Headphones size={19} strokeWidth={1.8} />
   ),
 ];
 
@@ -255,7 +287,6 @@ const SideNav = ({ ...others }: SideNavProps) => {
   const { userPermissions } = usePermissions();
 
   const { mytheme } = useSelector((state: RootState) => state.theme);
-  const colors = getThemeColors(mytheme as 'dark' | 'light');
 
   const items = useMemo(
     () => filterMenuByRole(CRM_MENU_ITEMS, userPermissions, user),
@@ -308,39 +339,77 @@ const SideNav = ({ ...others }: SideNavProps) => {
       ref={nodeRef as React.Ref<HTMLDivElement>}
       breakpoint="lg"
       collapsedWidth="0"
+      width={248}
       {...others}
+      className={`workspace-sidebar ${others.className ?? ''}`}
+      style={{ ...others.style, background: '#18212d', border: 'none' }}
     >
-      <Logo
-        color="blue"
-        asLink
-        href="/"
-        justify="center"
-        gap="small"
-        imgSize={{ h: 28, w: 28 }}
-        style={{ padding: '1rem 0' }}
-      />
-
-      <ConfigProvider
-        theme={{
-          components: {
-            Menu: {
-              itemBg: 'none',
-              itemSelectedBg: colors[100],
-              itemHoverBg: colors[50],
-              itemSelectedColor: colors[600],
-            },
-          },
-        }}
-      >
-        <Menu
-          mode="inline"
-          items={items}
-          openKeys={openKeys}
-          onOpenChange={onOpenChange}
-          selectedKeys={[current]}
-          style={{ border: 'none' }}
+      <div className="sidebar-brand">
+        <Logo
+          color="#ffffff"
+          asLink
+          href="/"
+          justify="flex-start"
+          gap="small"
+          imgSize={{ h: 38, w: 38 }}
+          style={{ padding: 0 }}
         />
-      </ConfigProvider>
+        <span className="sidebar-brand-caption">BUSINESS WORKSPACE</span>
+      </div>
+      <div className="sidebar-workspace">
+        <span className="sidebar-workspace-icon">
+          <Building2 size={19} />
+        </span>
+        <div>
+          <strong>Jemini Snacks</strong>
+          <span>Team workspace</span>
+        </div>
+        <ChevronRight size={15} aria-hidden="true" />
+      </div>
+      <div className="sidebar-navigation">
+        <div className="sidebar-nav-label">WORKSPACE</div>
+        <ConfigProvider
+          theme={{
+            components: {
+              Menu: {
+                itemBg: 'transparent',
+                subMenuItemBg: 'transparent',
+                itemSelectedBg: '#b42014',
+                itemHoverBg: 'rgba(255,255,255,0.06)',
+                itemSelectedColor: '#ffffff',
+                itemColor: '#aab6c7',
+                itemHoverColor: '#ffffff',
+                subMenuItemSelectedColor: '#ffffff',
+                groupTitleColor: '#718198',
+                groupTitleFontSize: 10,
+                itemHeight: 43,
+                iconSize: 19,
+                fontSize: 13,
+                itemMarginBlock: 4,
+                popupBg: mytheme === 'dark' ? '#18212d' : '#ffffff',
+              },
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            items={items}
+            openKeys={openKeys}
+            onOpenChange={onOpenChange}
+            selectedKeys={[current]}
+            style={{ border: 'none', background: 'transparent' }}
+          />
+        </ConfigProvider>
+      </div>
+      <div className="sidebar-footer">
+        <span className="sidebar-footer-icon">
+          <ShieldCheck size={18} />
+        </span>
+        <div>
+          <strong>Your business, connected.</strong>
+          <span>Jemini Snacks CRM</span>
+        </div>
+      </div>
     </Sider>
   );
 };

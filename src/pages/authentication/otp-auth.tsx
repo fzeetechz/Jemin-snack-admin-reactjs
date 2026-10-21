@@ -1,3 +1,4 @@
+import { ArrowLeft as ArrowLeftOutlined } from 'lucide-react';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { useState } from 'react';
 import {
@@ -9,7 +10,7 @@ import {
   message,
   Space,
 } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+
 import { Link, useNavigate } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;

@@ -120,7 +120,7 @@ const Location = () => {
               setSearchParams({ userId: record._id });
             }}
           >
-            <Locate />
+            <Locate size={16} strokeWidth={1.8} />
             View
           </Button>
         </Space>
@@ -129,11 +129,11 @@ const Location = () => {
   ];
   return (
     <div>
-      <div style={{ padding: 24 }}>
+      <div className="module-page">
         <Card title="Staff Location ">
           {userId ? (
             <div style={{ height: '60%' }}>
-              <Space style={{ marginBottom: 12 }}>
+              <Space wrap style={{ marginBottom: 18 }}>
                 <DatePicker
                   value={selectedDate}
                   onChange={(date) => date && setSelectedDate(date)}

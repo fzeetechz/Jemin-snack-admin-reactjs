@@ -79,6 +79,7 @@ export const SignUpPage = () => {
 
   return (
     <Row
+      className="auth-page"
       style={{
         minHeight: isMobile ? 'auto' : '100vh',
         overflow: 'hidden',
@@ -101,6 +102,7 @@ export const SignUpPage = () => {
       <AuthLeft />
       <Col xs={24} lg={12}>
         <Flex
+          className="auth-form-panel"
           vertical
           align={isMobile ? 'center' : 'flex-start'}
           justify="center"

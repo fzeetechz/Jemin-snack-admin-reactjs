@@ -1,4 +1,5 @@
-import { DeleteOutlined } from '@ant-design/icons';
+import { Trash2 as DeleteOutlined } from 'lucide-react';
+
 import {
   Button,
   Calendar,

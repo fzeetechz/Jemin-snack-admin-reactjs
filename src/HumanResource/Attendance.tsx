@@ -1,3 +1,4 @@
+import { PencilLine as EditOutlined, Eye as EyeOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -22,12 +23,7 @@ import {
   Typography,
   message,
 } from 'antd';
-import {
-  CalendarOutlined,
-  EditOutlined,
-  EyeOutlined,
-  ReloadOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import attendanceService from '../services/attendanceService';
@@ -662,7 +658,7 @@ const Attendance = () => {
   return (
     <div
       style={{
-        padding: 24,
+        padding: 0,
         minHeight: '100%',
       }}
     >

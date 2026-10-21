@@ -1,3 +1,4 @@
+import { PencilLine as EditOutlined, Eye as EyeOutlined, Download as DownloadOutlined, X as CloseOutlined } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Card,
@@ -15,20 +16,7 @@ import {
   message,
   Progress,
 } from 'antd';
-import {
-  EditOutlined,
-  EyeOutlined,
-  FileTextOutlined,
-  CheckSquareOutlined,
-  SafetyCertificateOutlined,
-  SendOutlined,
-  UserAddOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  DownloadOutlined,
-  CloseOutlined,
-  PrinterOutlined,
-} from '@ant-design/icons';
+import { FileTextOutlined, CheckSquareOutlined, SafetyCertificateOutlined, SendOutlined, UserAddOutlined, MailOutlined, PhoneOutlined, PrinterOutlined } from '@ant-design/icons';
 import { BASEURL } from 'src/services/api/apiClient';
 import candidateService from 'src/services/candidateService';
 import { useParams } from 'react-router-dom';
@@ -338,7 +326,7 @@ const SigleCandidate = () => {
 
   return (
     <div
-      style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}
+      className="module-page" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}
     >
       {/* Hero Card */}
       <Card bordered={false} style={{ borderRadius: 12 }}>

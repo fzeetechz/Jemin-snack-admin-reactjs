@@ -1,3 +1,4 @@
+import { X as CloseOutlined, RefreshCw as ReloadOutlined, Eye as EyeOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
@@ -13,12 +14,7 @@ import {
   Popconfirm,
   Modal,
 } from 'antd';
-import {
-  CheckOutlined,
-  CloseOutlined,
-  ReloadOutlined,
-  EyeOutlined,
-} from '@ant-design/icons';
+import { CheckOutlined } from '@ant-design/icons';
 import { UserAvatar } from 'src/components';
 import leaveService from 'src/services/leaveService';
 import { imageUrl, timeConverter } from 'src/utils/convertor';
@@ -254,7 +250,7 @@ const Leave = () => {
   ];
 
   return (
-    <Flex vertical gap={16} style={{ padding: 24 }}>
+    <Flex vertical gap={16} className="module-page">
       {/* Stats Row */}
       <Flex gap={12} wrap="wrap">
         {[

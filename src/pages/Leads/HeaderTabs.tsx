@@ -149,7 +149,7 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                         <MailOutlined /> {lead.email}
                       </a>
                     ) : (
-                      <span style={{ color: '#667085' }}>
+                      <span style={{ color: 'var(--muted)' }}>
                         <MailOutlined /> -
                       </span>
                     )}
@@ -159,7 +159,7 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                         <PhoneOutlined /> {lead.phone}
                       </a>
                     ) : (
-                      <span style={{ color: '#667085' }}>
+                      <span style={{ color: 'var(--muted)' }}>
                         <PhoneOutlined /> -
                       </span>
                     )}
@@ -169,7 +169,7 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                         <GlobalOutlined /> Website
                       </a>
                     ) : (
-                      <span style={{ color: '#667085' }}>
+                      <span style={{ color: 'var(--muted)' }}>
                         <GlobalOutlined /> -
                       </span>
                     )}
@@ -286,7 +286,7 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                     style={{ width: '100%' }}
                   >
                     <Flex gap={8} align="center">
-                      <EnvironmentOutlined style={{ color: '#667085' }} />
+                      <EnvironmentOutlined style={{ color: 'var(--muted)' }} />
                       <Typography.Text strong>
                         {displayText(lead.address)}
                       </Typography.Text>
@@ -364,7 +364,7 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                     <div
                       style={{
                         fontSize: 12,
-                        color: '#667085',
+                        color: 'var(--muted)',
                         marginBottom: 6,
                       }}
                     >
@@ -389,11 +389,17 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
                   <Divider style={{ margin: '10px 0' }} />
 
                   <div
-                    style={{ fontSize: 12, color: '#667085', marginBottom: 6 }}
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--muted)',
+                      marginBottom: 6,
+                    }}
                   >
                     Description
                   </div>
-                  <Typography.Paragraph style={{ margin: 0, color: '#101828' }}>
+                  <Typography.Paragraph
+                    style={{ margin: 0, color: 'var(--text)' }}
+                  >
                     {displayText(lead.description)}
                   </Typography.Paragraph>
                 </Card>
@@ -403,15 +409,15 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
         );
 
       case 'proposals':
-        return <div style={{ color: '#667085' }}>No proposals yet.</div>;
+        return <div style={{ color: 'var(--muted)' }}>No proposals yet.</div>;
       case 'tasks':
         return <Tasks lead={lead} />;
       case 'attachments':
-        return <div style={{ color: '#667085' }}>No attachments yet.</div>;
+        return <div style={{ color: 'var(--muted)' }}>No attachments yet.</div>;
       case 'reminders':
-        return <div style={{ color: '#667085' }}>No reminders yet.</div>;
+        return <div style={{ color: 'var(--muted)' }}>No reminders yet.</div>;
       case 'notes':
-        return <div style={{ color: '#667085' }}>No notes yet.</div>;
+        return <div style={{ color: 'var(--muted)' }}>No notes yet.</div>;
       case 'activity':
         return <ActivityComp id={lead._id} />;
       default:
@@ -421,8 +427,9 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
 
   return (
     <div
+      className="lead-detail-tabs"
       style={{
-        background: '#f5f6f8',
+        background: 'var(--surface-muted)',
         padding: '8px 12px',
         borderRadius: 10,
       }}
@@ -447,7 +454,11 @@ const HeaderTabs: React.FC<HeaderTabsProps> = ({ activeTab, lead }) => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: direction * -60, opacity: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            style={{ background: '#fff', borderRadius: 10, padding: 12 }}
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 10,
+              padding: 12,
+            }}
           >
             {renderContent()}
           </motion.div>
@@ -462,10 +473,10 @@ const Field: React.FC<{ label: string; value: React.ReactNode }> = ({
   value,
 }) => (
   <div style={{ padding: '6px 0' }}>
-    <div style={{ fontSize: 12, color: '#667085', marginBottom: 4 }}>
+    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
       {label}
     </div>
-    <div style={{ fontSize: 14, fontWeight: 600, color: '#101828' }}>
+    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
       {value}
     </div>
   </div>

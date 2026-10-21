@@ -1,3 +1,4 @@
+import { Save as SaveOutlined } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Button,
@@ -9,7 +10,7 @@ import {
   Typography,
   message,
 } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+
 import { Card } from '../../components';
 import { useOutletContext } from 'react-router-dom';
 import type { UserProfileData } from '../../layouts/user-account';

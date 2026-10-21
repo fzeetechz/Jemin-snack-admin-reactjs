@@ -1,3 +1,4 @@
+import { X as CloseOutlined, Trash2 as DeleteOutlined, PencilLine as EditOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined, Upload as UploadOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
@@ -26,16 +27,7 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  AppstoreAddOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  TagsOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import { AppstoreAddOutlined, TagsOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { BASEURL } from 'src/services/api/apiClient';
 import useProducts from 'src/services/useProducts';
@@ -308,8 +300,6 @@ const Products = () => {
   const [editingType, setEditingType] = useState<ProductType | null>(null);
   const [editingSubType, setEditingSubType] = useState<SubType | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [searchText, setSearchText] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>();
 
   const [typeForm] = Form.useForm<Pick<ProductType, 'name'>>();
   const [subTypeForm] = Form.useForm<{ name: string; category: string }>();
@@ -335,18 +325,6 @@ const Products = () => {
     }
 
     return types.find((type) => type._id === category)?.name || 'Unassigned';
-  };
-
-  const getSubCategoryName = (subCategory: Product['subCategory']) => {
-    if (!subCategory) {
-      return '';
-    }
-
-    if (typeof subCategory !== 'string') {
-      return subCategory.name || '';
-    }
-
-    return subTypes.find((subType) => subType._id === subCategory)?.name || '';
   };
 
   const categorySubTypes = useMemo(
@@ -802,7 +780,7 @@ const Products = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="module-page">
       {/* {JSON.stringify(canCreate('products'))} <br />
       {JSON.stringify(canUpdate('products'))} <br />
       {JSON.stringify(canDelete('products'))} */}

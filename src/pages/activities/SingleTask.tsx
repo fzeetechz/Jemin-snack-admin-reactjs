@@ -1,3 +1,4 @@
+import { ArrowLeft as ArrowLeftOutlined, Plus as PlusOutlined, Upload as UploadOutlined } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -13,21 +14,7 @@ import {
   Modal,
   Upload,
 } from 'antd';
-import {
-  ArrowLeftOutlined,
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationOutlined,
-  MailOutlined,
-  MessageOutlined,
-  FileOutlined,
-  PaperClipOutlined,
-  PlusOutlined,
-  SendOutlined,
-  UserOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, ExclamationOutlined, MailOutlined, MessageOutlined, FileOutlined, PaperClipOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
 import taskService from '../../services/taskService';
 import activityLogservices from '../../services/activityService';
 import { getAttachmentUrl } from '../../utils/convertor';
@@ -37,7 +24,7 @@ const { Title, Text, Paragraph } = Typography;
 type TabKey = 'overview' | 'activity' | 'followers';
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { padding: 24, maxWidth: 1400, margin: '0 auto' },
+  page: { padding: 0, maxWidth: 1400, margin: '0 auto' },
   breadcrumbs: { marginBottom: 10, color: '#64748b', fontSize: 14 },
   topRow: {
     display: 'flex',

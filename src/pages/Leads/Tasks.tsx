@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined, Eye as EyeOutlined, Upload as UploadOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import {
@@ -23,14 +24,7 @@ import leadServices from '../../services/leadServices';
 import configService from '../../services/configService';
 import { apiRequest } from '../../services/api/apiClient';
 import { API_ENDPOINTS } from '../../services/api/endpoints';
-import {
-  PlusOutlined,
-  MoreOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import { MoreOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import staffService from '../../services/staffService';
 import taskService from '../../services/taskService';

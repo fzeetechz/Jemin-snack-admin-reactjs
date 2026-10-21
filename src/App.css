@@ -1,10 +1,12 @@
 /*react transition group css*/
 .page-enter {
   opacity: 0;
+  transform: translateY(6px);
 }
 
 .page-enter-active {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .page-exit {
@@ -17,7 +19,9 @@
 
 .page-enter-active,
 .page-exit-active {
-  transition: opacity 200ms;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 .fade-enter-active,

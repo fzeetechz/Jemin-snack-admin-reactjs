@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useState } from 'react';
@@ -21,7 +22,7 @@ import {
   Popconfirm,
   Alert,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
@@ -230,7 +231,7 @@ const ContractPage = () => {
   };
 
   return (
-    <div style={{ padding: 16 }}>
+    <div className="module-page">
       <Flex align="center" justify="space-between" style={{ marginBottom: 16 }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           Contracts

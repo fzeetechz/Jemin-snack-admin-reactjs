@@ -1,32 +1,19 @@
+import { theme } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  MapContainer,
-  TileLayer,
-  Polyline,
-  Marker,
-  Popup,
-  CircleMarker,
-} from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleRouteMap from './GoogleRouteMap';
+import type { RoutePoint, RouteSegment, StayPoint } from './GoogleRouteMap';
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
+interface LocationData {
+  routes?: { points: { lat: number; lng: number; timestamp: string }[] }[];
+  stays?: StayPoint[];
+  summary?: {
+    totalDistance: number;
+    totalMovingTime: number;
+    totalStayTime: number;
+  };
+}
 
-const startIcon = new L.Icon({
-  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-  iconSize: [32, 32],
-});
-
-const endIcon = new L.Icon({
-  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-  iconSize: [32, 32],
-});
+const EMPTY_STAYS: StayPoint[] = [];
 
 const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371e3;
@@ -52,14 +39,15 @@ const fmtDuration = (sec: number) => {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 };
 
-const Map = ({ data }: any) => {
-  const [pointsData, setPointsData] = useState<any[]>([]);
+const Map = ({ data }: { data: LocationData | null }) => {
+  const { token } = theme.useToken();
+  const [pointsData, setPointsData] = useState<RoutePoint[]>([]);
   const [timeFilter, setTimeFilter] = useState({ start: '', end: '' });
 
-  const processPoints = (routes: any[]) => {
-    const all: any[] = [];
+  const processPoints = (routes: NonNullable<LocationData['routes']>) => {
+    const all: RoutePoint[] = [];
     routes.forEach((r) => {
-      r.points.forEach((p: any) => {
+      r.points.forEach((p) => {
         all.push({ lat: p.lat, lng: p.lng, time: new Date(p.timestamp) });
       });
     });
@@ -77,11 +65,13 @@ const Map = ({ data }: any) => {
         );
       }
       setPointsData(pts);
+    } else {
+      setPointsData([]);
     }
   }, [data, timeFilter]);
 
   const { segments, avgTimePer100m } = useMemo(() => {
-    const segs: any[] = [];
+    const segs: RouteSegment[] = [];
     let totalDistance = 0;
     let totalTime = 0;
 
@@ -122,13 +112,11 @@ const Map = ({ data }: any) => {
     return { segments: segs, avgTimePer100m: Math.round(avg) };
   }, [pointsData]);
 
-  const start = pointsData[0];
-  const end = pointsData[pointsData.length - 1];
-  const stays = data?.stays || [];
+  const stays = data?.stays ?? EMPTY_STAYS;
   const summary = data?.summary;
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ fontFamily: token.fontFamily }}>
       {/* Summary Cards */}
       {summary && (
         <div
@@ -163,8 +151,8 @@ const Map = ({ data }: any) => {
               style={{
                 flex: 1,
                 minWidth: 100,
-                background: '#fff',
-                border: '1px solid #e8e8e8',
+                background: token.colorBgContainer,
+                border: `1px solid ${token.colorBorderSecondary}`,
                 borderRadius: 10,
                 padding: '10px 14px',
                 textAlign: 'center',
@@ -172,10 +160,22 @@ const Map = ({ data }: any) => {
               }}
             >
               <div style={{ fontSize: 20 }}>{s.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: token.colorText,
+                }}
+              >
                 {s.value}
               </div>
-              <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: token.colorTextSecondary,
+                  marginTop: 2,
+                }}
+              >
                 {s.label}
               </div>
             </div>
@@ -188,16 +188,21 @@ const Map = ({ data }: any) => {
         style={{
           display: 'flex',
           gap: 10,
+          flexWrap: 'wrap',
           marginBottom: 10,
           alignItems: 'center',
         }}
       >
-        <span style={{ fontSize: 13, color: '#555' }}>Filter:</span>
+        <span style={{ fontSize: 13, color: token.colorTextSecondary }}>
+          Filter:
+        </span>
         <input
           type="datetime-local"
           style={{
             borderRadius: 6,
-            border: '1px solid #d9d9d9',
+            border: `1px solid ${token.colorBorder}`,
+            color: token.colorText,
+            background: token.colorBgContainer,
             padding: '4px 8px',
             fontSize: 13,
           }}
@@ -205,12 +210,14 @@ const Map = ({ data }: any) => {
             setTimeFilter((p) => ({ ...p, start: e.target.value }))
           }
         />
-        <span style={{ color: '#888' }}>→</span>
+        <span style={{ color: token.colorTextSecondary }}>→</span>
         <input
           type="datetime-local"
           style={{
             borderRadius: 6,
-            border: '1px solid #d9d9d9',
+            border: `1px solid ${token.colorBorder}`,
+            color: token.colorText,
+            background: token.colorBgContainer,
             padding: '4px 8px',
             fontSize: 13,
           }}
@@ -227,7 +234,8 @@ const Map = ({ data }: any) => {
           fontSize: 12,
           display: 'flex',
           gap: 16,
-          color: '#555',
+          flexWrap: 'wrap',
+          color: token.colorTextSecondary,
         }}
       >
         <span>🟢 Fast (&lt;30s)</span>
@@ -241,98 +249,16 @@ const Map = ({ data }: any) => {
           height: '65vh',
           borderRadius: 12,
           overflow: 'hidden',
-          border: '1px solid #e8e8e8',
+          border: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
-        <MapContainer
-          center={
-            (start ? [start.lat, start.lng] : [26.83865, 75.78781]) as [
-              number,
-              number,
-            ]
-          }
-          zoom={13}
-          style={{ height: '100%' }}
-        >
-          <TileLayer
-            attribution="© OpenStreetMap"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          {/* Route segments */}
-          {segments.map((seg, i) => (
-            <Polyline
-              key={i}
-              positions={seg.positions}
-              pathOptions={{ color: seg.color, weight: 5, opacity: 0.85 }}
-            >
-              <Popup>
-                <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-                  <b>
-                    🕒 {seg.fromTime} → {seg.toTime}
-                  </b>
-                  <br />
-                  📏 Distance: <b>{seg.distance}m</b>
-                  <br />
-                  ⏱️ Time taken: <b>{fmtDuration(seg.timeTaken)}</b>
-                </div>
-              </Popup>
-            </Polyline>
-          ))}
-
-          {/* Stay points from backend */}
-          {stays.map((s: any, i: number) => (
-            <CircleMarker
-              key={i}
-              center={[s.lat, s.lng] as [number, number]}
-              radius={10}
-              pathOptions={{
-                color: '#1677ff',
-                fillColor: '#1677ff',
-                fillOpacity: 0.3,
-                weight: 2,
-              }}
-            >
-              <Popup>
-                <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-                  <b>🛑 Stay Point</b>
-                  <br />
-                  🕒 {fmtTime(s.startTime)} → {fmtTime(s.endTime)}
-                  <br />
-                  ⏱️ Duration: <b>{fmtDuration(s.duration)}</b>
-                </div>
-              </Popup>
-            </CircleMarker>
-          ))}
-
-          {/* Start */}
-          {start && (
-            <Marker
-              position={[start.lat, start.lng] as [number, number]}
-              icon={startIcon}
-            >
-              <Popup>
-                <b>🟢 Start</b>
-                <br />
-                {start.time.toLocaleTimeString()}
-              </Popup>
-            </Marker>
-          )}
-
-          {/* End */}
-          {end && end !== start && (
-            <Marker
-              position={[end.lat, end.lng] as [number, number]}
-              icon={endIcon}
-            >
-              <Popup>
-                <b>🔴 End</b>
-                <br />
-                {end.time.toLocaleTimeString()}
-              </Popup>
-            </Marker>
-          )}
-        </MapContainer>
+        <GoogleRouteMap
+          points={pointsData}
+          segments={segments}
+          stays={stays}
+          formatDuration={fmtDuration}
+          formatTime={fmtTime}
+        />
       </div>
     </div>
   );

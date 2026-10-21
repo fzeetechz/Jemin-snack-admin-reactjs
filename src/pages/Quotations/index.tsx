@@ -1,3 +1,4 @@
+import { Trash2 as DeleteOutlined, Eye as EyeOutlined, PencilLine as EditOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
@@ -24,16 +25,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import {
-  DeleteOutlined,
-  EyeOutlined,
-  EditOutlined,
-  FilePdfOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  ShoppingOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { FilePdfOutlined, ShoppingOutlined, UserOutlined } from '@ant-design/icons';
 import apiClient, { BASEURL } from '../../services/api/apiClient';
 import { tokenStorage } from '../../services/auth/tokenStorage';
 import useProducts from '../../services/useProducts';
@@ -431,7 +423,7 @@ const QuotationsPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="module-page">
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <div>
           <Text style={{ fontSize: 20, fontWeight: 700 }}>Orders</Text>

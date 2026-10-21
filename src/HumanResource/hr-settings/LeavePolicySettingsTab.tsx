@@ -1,4 +1,5 @@
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Trash2 as DeleteOutlined, Plus as PlusOutlined } from 'lucide-react';
+
 import {
   Button,
   Card,

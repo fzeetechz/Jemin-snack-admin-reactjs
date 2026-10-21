@@ -1,3 +1,4 @@
+import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
@@ -17,12 +18,7 @@ import {
   Modal,
   Select,
 } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import {
   getModuleConfig,
   PermissionObj,

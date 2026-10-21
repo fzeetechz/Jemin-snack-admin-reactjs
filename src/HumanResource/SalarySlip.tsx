@@ -1,11 +1,7 @@
+import { Eye as EyeOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
-import {
-  CalendarOutlined,
-  EyeOutlined,
-  ReloadOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined, WalletOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
@@ -206,7 +202,7 @@ const SalarySlip = () => {
   ];
 
   return (
-    <Flex vertical gap={24} style={{ padding: 24 }}>
+    <Flex vertical gap={24} className="module-page">
       <Card bordered={false} style={{ borderRadius: 24 }}>
         <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
           <div>

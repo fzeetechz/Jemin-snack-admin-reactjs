@@ -1,12 +1,5 @@
-import {
-  SaveOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  TeamOutlined,
-  BulbOutlined,
-} from '@ant-design/icons';
+import { Save as SaveOutlined } from 'lucide-react';
+import { CheckCircleOutlined, ClockCircleOutlined, CalendarOutlined, DollarOutlined, TeamOutlined, BulbOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
@@ -616,9 +609,9 @@ const HrSettings = () => {
         vertical
         gap={24}
         style={{
-          padding: '24px',
+          padding: 0,
           background: token.colorBgLayout,
-          minHeight: '100vh',
+          minHeight: 'auto',
         }}
       >
         {/* Main Settings Card */}

@@ -1,0 +1,85 @@
+import type { ThemeConfig } from 'antd';
+import { PRIMARY_COLOR } from './colors';
+
+export const getComponentTheme = (dark: boolean): ThemeConfig => ({
+  token: {
+    colorPrimary: PRIMARY_COLOR,
+    colorInfo: PRIMARY_COLOR,
+    colorSuccess: '#278466',
+    colorWarning: '#c48a24',
+    colorError: '#d64848',
+    colorBgLayout: dark ? '#11161c' : '#f5f6f8',
+    colorBgContainer: dark ? '#1a212b' : '#ffffff',
+    colorBorder: dark ? '#35404e' : '#dce1e8',
+    colorBorderSecondary: dark ? '#2c3542' : '#eaedf2',
+    colorText: dark ? '#e8edf5' : '#202938',
+    colorTextSecondary: dark ? '#a0adbe' : '#6e7b8d',
+    fontFamily:
+      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontSize: 14,
+    fontSizeHeading1: 34,
+    fontSizeHeading2: 28,
+    fontSizeHeading3: 23,
+    lineHeight: 1.65,
+    borderRadius: 10,
+    borderRadiusLG: 16,
+    borderRadiusSM: 7,
+    controlHeight: 38,
+    controlHeightLG: 46,
+    boxShadow: '0 4px 18px rgba(24,39,60,0.07)',
+    boxShadowSecondary: '0 12px 40px rgba(24,39,60,0.12)',
+  },
+  components: {
+    Button: {
+      fontWeight: 600,
+      paddingInline: 16,
+      primaryShadow: '0 3px 8px rgba(180,32,20,0.16)',
+    },
+    Card: { headerFontSize: 16, headerHeight: 64, paddingLG: 24 },
+    Table: {
+      headerBg: dark ? '#202a36' : '#f7f9fc',
+      headerColor: dark ? '#aebbcf' : '#748196',
+      rowHoverBg: dark ? '#222e3c' : '#faf7f6',
+      headerSplitColor: 'transparent',
+      borderColor: dark ? '#2c3542' : '#edf0f4',
+      cellPaddingBlock: 16,
+      cellPaddingInline: 18,
+      footerBg: dark ? '#202a36' : '#f7f9fc',
+    },
+    Input: { paddingBlock: 8, activeShadow: '0 0 0 3px rgba(180,32,20,0.08)' },
+    InputNumber: {
+      paddingBlock: 8,
+      activeShadow: '0 0 0 3px rgba(180,32,20,0.08)',
+    },
+    Select: {
+      optionSelectedBg: dark ? '#442a2b' : '#fbefed',
+      optionSelectedFontWeight: 600,
+    },
+    DatePicker: {
+      paddingBlock: 8,
+      activeShadow: '0 0 0 3px rgba(180,32,20,0.08)',
+    },
+    Tabs: {
+      titleFontSize: 14,
+      horizontalItemGutter: 28,
+      inkBarColor: PRIMARY_COLOR,
+    },
+    Segmented: {
+      trackBg: dark ? '#111923' : '#f1f3f7',
+      itemSelectedBg: dark ? '#2b3746' : '#ffffff',
+      trackPadding: 5,
+    },
+    Tag: {
+      borderRadiusSM: 6,
+      defaultBg: dark ? '#252e3b' : '#f4f6f9',
+      defaultColor: dark ? '#bdc9d8' : '#637086',
+    },
+    Modal: { paddingLG: 28, titleFontSize: 19 },
+    Drawer: { paddingLG: 28 },
+    Menu: { itemBorderRadius: 9, subMenuItemBorderRadius: 8 },
+    Calendar: { colorBgContainer: 'transparent' },
+    Carousel: { dotWidth: 8 },
+    Timeline: { dotBg: 'transparent' },
+    Typography: { linkHoverDecoration: 'underline' },
+  },
+});

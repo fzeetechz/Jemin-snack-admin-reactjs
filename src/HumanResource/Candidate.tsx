@@ -152,7 +152,7 @@ const Candidate = () => {
   ];
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="module-page">
       <h2>Candidate Management</h2>
 
       {canCreate('candidates') && (

@@ -330,7 +330,7 @@ const CallLogs = () => {
   ];
 
   return (
-    <div style={{ padding: 5 }}>
+    <div className="module-page">
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[
           {
