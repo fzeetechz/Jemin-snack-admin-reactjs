@@ -1,10 +1,11 @@
 import { Plus as PlusOutlined, PencilLine as EditOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Card,
+  Avatar,
   Button,
   Space,
   Tag,
@@ -14,13 +15,15 @@ import {
   Select,
   message,
   Modal,
+  theme,
 } from 'antd';
 import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import staffService from '../../../services/staffService';
 import roleService from '../../../services/roleService';
 import { usePermissions } from '../../../hooks';
 import ShiftSelector from 'src/components/ShiftSelector';
-import { ProfileWithPlaceholder } from 'src/utils/convertor';
+import { getAttachmentUrl } from 'src/utils/convertor';
+import { getNameInitials } from 'src/utils';
 import ImageModal from 'src/components/ImageModal';
 
 type UserStatus = 'active' | 'inactive';
@@ -37,12 +40,81 @@ type User = {
   createdAt?: string;
   password?: string;
   shiftId?: any;
+  avatar?: string | null;
 };
 
 type Role = {
   _id: string;
   name: string; // display name
   key: string; // slug like 'admin', 'sales_manager'
+};
+
+interface StaffAvatarProps {
+  staff: User;
+  onPreview: () => void;
+}
+
+const StaffAvatar = ({ staff, onPreview }: StaffAvatarProps) => {
+  const { token } = theme.useToken();
+  const [imageFailed, setImageFailed] = useState(false);
+  const avatarPath = staff.avatar?.trim();
+  const avatarUrl = avatarPath ? getAttachmentUrl(avatarPath) : undefined;
+  const fullName = [staff.firstName, staff.lastName]
+    .map((name) => name?.trim())
+    .filter(Boolean)
+    .join(' ');
+  const colors = [
+    [token.colorPrimaryBg, token.colorPrimaryText],
+    [token.colorSuccessBg, token.colorSuccessText],
+    [token.colorWarningBg, token.colorWarningText],
+    [token.colorInfoBg, token.colorInfoText],
+  ];
+  const colorIndex = Array.from(staff._id || fullName).reduce(
+    (hash, character) => (hash + character.codePointAt(0)!) % colors.length,
+    0
+  );
+  const [backgroundColor, color] = colors[colorIndex];
+  const hasPhoto = Boolean(avatarUrl) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [avatarUrl]);
+
+  const avatar = (
+    <Avatar
+      size={64}
+      src={hasPhoto ? avatarUrl : undefined}
+      alt={fullName || 'Staff'}
+      onError={() => {
+        setImageFailed(true);
+        return false;
+      }}
+      style={{
+        backgroundColor,
+        color,
+        fontWeight: 600,
+        fontSize: 22,
+        border: `2px solid ${token.colorBgContainer}`,
+        boxShadow: token.boxShadowTertiary,
+      }}
+    >
+      {getNameInitials(fullName).toUpperCase() || 'S'}
+    </Avatar>
+  );
+
+  return hasPhoto ? (
+    <Button
+      type="text"
+      shape="circle"
+      aria-label={`View ${fullName || 'staff'} photo`}
+      onClick={onPreview}
+      style={{ width: 70, height: 70, padding: 3 }}
+    >
+      {avatar}
+    </Button>
+  ) : (
+    avatar
+  );
 };
 
 const StaffPage = () => {
@@ -93,7 +165,13 @@ const StaffPage = () => {
 
   // Later: API call
   const getStaffs = async () => {
-    try { setUsers((await fetchAllListingPages<User>('/staff', 'items')).map(normalizeUser)); } catch { message.error('Unable to load staff'); }
+    try {
+      setUsers(
+        (await fetchAllListingPages<User>('/staff', 'items')).map(normalizeUser)
+      );
+    } catch {
+      message.error('Unable to load staff');
+    }
   };
   useEffect(() => {
     const fetchRoles = async () => {
@@ -245,19 +323,15 @@ const StaffPage = () => {
       title: 'Image',
       dataIndex: 'avatar',
       key: 'avatar',
-      render: (_: any, record: any) => {
-        console.log(_);
-        return (
-          <img
-            onClick={() => {
-              setSelectedStaff(record);
-              showModal();
-            }}
-            style={{ width: 70, height: 70, borderRadius: '50%' }}
-            src={ProfileWithPlaceholder(record)}
-          ></img>
-        );
-      },
+      render: (_: unknown, record: User) => (
+        <StaffAvatar
+          staff={record}
+          onPreview={() => {
+            setSelectedStaff(record);
+            showModal();
+          }}
+        />
+      ),
     },
     {
       title: 'StaffId',
@@ -349,7 +423,7 @@ const StaffPage = () => {
     <div className="module-page">
       {isModalOpen && (
         <ImageModal
-          imageUrl={ProfileWithPlaceholder(selectedStaff)}
+          imageUrl={getAttachmentUrl(selectedStaff?.avatar)}
           isModalOpen={isModalOpen}
           onClose={handleCancel}
           title={selectedStaff?.firstName + ' ' + selectedStaff?.lastName}
@@ -369,7 +443,11 @@ const StaffPage = () => {
           )
         }
       >
-        <ListingTable listingTitle="Staff" onRefresh={getStaffs} fields={LISTING_FIELDS.staff} filterKeys={["status","roleId","shiftId"]} importConfig={canCreate('settings.users') && listingImport('staff', getStaffs, (row) => roles.some((role) => role._id === row.roleId) ? [] : ['Role ID does not exist'])}
+        <ListingTable
+          listingTitle="Staff"
+          onRefresh={getStaffs}
+          fields={LISTING_FIELDS.staff}
+          filterKeys={['status', 'roleId', 'shiftId']}
           rowKey={(record) => record._id}
           columns={columns}
           dataSource={users}

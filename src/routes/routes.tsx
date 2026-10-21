@@ -247,6 +247,10 @@ const router = createBrowserRouter([
         element: <ConfigPage />,
       },
       {
+        path: 'support',
+        element: <UserProfileHelpPage />,
+      },
+      {
         path: 'location',
         element: <Location />,
       },
