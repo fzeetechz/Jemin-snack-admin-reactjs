@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../../components/shared/trash/MoveToTrashButton';
+import { usePermissions } from '../../hooks/usePermissions';
 import { ArrowLeft as ArrowLeftOutlined, Plus as PlusOutlined, Upload as UploadOutlined } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -173,6 +175,7 @@ const styles: Record<string, React.CSSProperties> = {
 };
 
 const SingleTask = () => {
+  const { canDelete } = usePermissions();
   const { taskId } = useParams();
   const navigate = useNavigate();
   const { getById, updateTask, addAttachement } = taskService();
@@ -670,7 +673,9 @@ const SingleTask = () => {
                 </div>
                 <div style={styles.activityContent}>
                   <div style={styles.activityHeader}>
-                    <Text strong>{meta.title}</Text>
+                    <Space wrap><Text strong>{meta.title}</Text>
+                      {canDelete('tasks') && <MoveToTrashButton recordId={item._id} modelType="activityLog" onMoved={() => setActivity((previous) => previous.filter((entry) => entry._id !== item._id))} />}
+                    </Space>
                     <Text
                       type="secondary"
                       style={{ fontSize: 12, whiteSpace: 'nowrap' }}
@@ -811,6 +816,7 @@ const SingleTask = () => {
               </div>
 
               <div style={styles.actionWrap}>
+                {canDelete('tasks') && <MoveToTrashButton recordId={taskId} modelType="task" recordName={task.subject} onMoved={() => navigate('/crm/activities/tasks', { replace: true })} />}
                 <Button
                   onClick={markComplete}
                   disabled={task.status == 'completed'}

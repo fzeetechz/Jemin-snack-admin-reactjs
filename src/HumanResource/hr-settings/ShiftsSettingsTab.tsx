@@ -20,7 +20,14 @@ import { useHrSettingsContext } from './context';
 const { Text } = Typography;
 
 const ShiftsSettingsTab = () => {
-  const { form, addShift, updateShift, removeShift } = useHrSettingsContext();
+  const {
+    canDeleteSettings,
+    deletingSetting,
+    form,
+    addShift,
+    updateShift,
+    removeShift,
+  } = useHrSettingsContext();
 
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
@@ -67,9 +74,10 @@ const ShiftsSettingsTab = () => {
               danger
               type="text"
               icon={<DeleteOutlined />}
+              disabled={deletingSetting || (!canDeleteSettings && !!shift._id)}
               onClick={() => removeShift(index)}
             >
-              Remove
+              {shift._id ? 'Move to Trash' : 'Remove draft'}
             </Button>
           }
           style={{ border: '1px solid #f0f0f0', borderRadius: 18 }}

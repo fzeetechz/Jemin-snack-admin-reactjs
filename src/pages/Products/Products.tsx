@@ -1,7 +1,17 @@
-import { X as CloseOutlined, Trash2 as DeleteOutlined, PencilLine as EditOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined, Upload as UploadOutlined } from 'lucide-react';
+import {
+  X as CloseOutlined,
+  Trash2 as DeleteOutlined,
+  PencilLine as EditOutlined,
+  Plus as PlusOutlined,
+  RefreshCw as ReloadOutlined,
+  Upload as UploadOutlined,
+} from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import {
+  LISTING_FIELDS,
+  listingImport,
+} from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -14,7 +24,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Popconfirm,
   Row,
   Select,
   Space,
@@ -272,14 +281,11 @@ const Products = () => {
     getTypes,
     createTypes,
     updateTypes,
-    deleteTypes,
     createProducts,
     updateProducts,
-    deleteProducts,
     getSubTypes,
     createSubTypes,
     updateSubTypes,
-    deleteSubTypes,
   } = useProducts();
 
   const { canCreate, canUpdate, canDelete } = usePermissions();
@@ -292,7 +298,6 @@ const Products = () => {
   const [savingType, setSavingType] = useState(false);
   const [savingSubType, setSavingSubType] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [typeModal, setTypeModal] = useState(false);
   const [subTypeModal, setSubTypeModal] = useState(false);
@@ -515,32 +520,6 @@ const Products = () => {
     }
   };
 
-  const handleDeleteSubType = async (sub: SubType) => {
-    try {
-      setDeletingId(sub._id);
-      await deleteSubTypes(sub._id);
-      message.success('SubType deleted');
-      await fetchSubTypes();
-    } catch {
-      message.error('Unable to delete subtype');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const handleDeleteType = async (type: ProductType) => {
-    try {
-      setDeletingId(type._id);
-      await deleteTypes(type._id);
-      message.success('Type deleted');
-      await refreshPage();
-    } catch {
-      message.error('Unable to delete type');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   const handleSaveProduct = async () => {
     try {
       const values = await productForm.validateFields();
@@ -577,19 +556,6 @@ const Products = () => {
     }
   };
 
-  const handleDeleteProduct = async (product: Product) => {
-    try {
-      setDeletingId(product._id);
-      await deleteProducts(product._id);
-      message.success('Product deleted');
-      await fetchProducts();
-    } catch {
-      message.error('Unable to delete product');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   const typeColumns: ColumnsType<ProductType> = [
     {
       title: 'Type',
@@ -620,24 +586,6 @@ const Products = () => {
                 />
               )}
             </Tooltip>
-            <Popconfirm
-              title="Delete type?"
-              description={`Delete "${record.name}" from product types?`}
-              okText="Delete"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => handleDeleteType(record)}
-            >
-              <Tooltip title="Delete type">
-                {canDelete('products') && (
-                  <Button
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    loading={deletingId === record._id}
-                  />
-                )}
-              </Tooltip>
-            </Popconfirm>
           </Space>
         </>
       ),
@@ -756,24 +704,6 @@ const Products = () => {
               />
             )}
           </Tooltip>
-          <Popconfirm
-            title="Delete product?"
-            description={`Delete "${record.name}" from the catalog?`}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => handleDeleteProduct(record)}
-          >
-            <Tooltip title="Delete product">
-              {canDelete('products') && (
-                <Button
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  loading={deletingId === record._id}
-                />
-              )}
-            </Tooltip>
-          </Popconfirm>
         </Space>
       ),
     },
@@ -889,7 +819,18 @@ const Products = () => {
                 </Space>
               }
             >
-              <ListingTable listingTitle="Product Types" fields={LISTING_FIELDS.types} filterKeys={[]} importConfig={canCreate('products') && listingImport('types', fetchTypes)}
+              <ListingTable
+                trashConfig={{
+                  canDelete: canDelete('products'),
+                  modelType: 'productType',
+                  onComplete: refreshPage,
+                }}
+                listingTitle="Product Types"
+                fields={LISTING_FIELDS.types}
+                filterKeys={[]}
+                importConfig={
+                  canCreate('products') && listingImport('types', fetchTypes)
+                }
                 columns={typeColumns}
                 dataSource={types}
                 rowHoverable={false}
@@ -912,7 +853,23 @@ const Products = () => {
                       Sub Types
                     </Text>
                   </div>
-                  <ListingTable listingTitle="Product Subtypes" fields={LISTING_FIELDS.subtypes} filterKeys={["category"]} importConfig={canCreate('products') && listingImport('subtypes', fetchSubTypes, (row) => types.some((type) => type._id === row.category) ? [] : ['Type ID does not exist'])}
+                  <ListingTable
+                    trashConfig={{
+                      canDelete: canDelete('products'),
+                      modelType: 'productSubType',
+                      onComplete: fetchSubTypes,
+                    }}
+                    listingTitle="Product Subtypes"
+                    fields={LISTING_FIELDS.subtypes}
+                    filterKeys={['category']}
+                    importConfig={
+                      canCreate('products') &&
+                      listingImport('subtypes', fetchSubTypes, (row) =>
+                        types.some((type) => type._id === row.category)
+                          ? []
+                          : ['Type ID does not exist']
+                      )
+                    }
                     size="small"
                     rowKey="_id"
                     rowHoverable={false}
@@ -935,7 +892,8 @@ const Products = () => {
                         ),
                       },
                       {
-                        title: '',
+                        title: 'Actions',
+                        key: 'actions',
                         width: 80,
                         align: 'right' as const,
                         render: (_: any, r: SubType) => (
@@ -946,21 +904,6 @@ const Products = () => {
                                 icon={<EditOutlined />}
                                 onClick={() => openSubTypeModal(r)}
                               />
-                            )}
-                            {canDelete('products') && (
-                              <Popconfirm
-                                title="Delete subtype?"
-                                okText="Delete"
-                                okButtonProps={{ danger: true }}
-                                onConfirm={() => handleDeleteSubType(r)}
-                              >
-                                <Button
-                                  danger
-                                  size="small"
-                                  icon={<DeleteOutlined />}
-                                  loading={deletingId === r._id}
-                                />
-                              </Popconfirm>
                             )}
                           </Space>
                         ),
@@ -973,10 +916,24 @@ const Products = () => {
           </Col>
 
           <Col xs={24} xl={15}>
-            <Card
-              title="Products"
-            >
-              <ListingTable listingTitle="Products" fields={LISTING_FIELDS.products} filterKeys={["category","isActive"]} importConfig={canCreate('products') && listingImport('products', fetchProducts, (row) => types.some((type) => type._id === row.category) ? [] : ['Type ID does not exist'])}
+            <Card title="Products">
+              <ListingTable
+                trashConfig={{
+                  canDelete: canDelete('products'),
+                  modelType: 'product',
+                  onComplete: fetchProducts,
+                }}
+                listingTitle="Products"
+                fields={LISTING_FIELDS.products}
+                filterKeys={['category', 'isActive']}
+                importConfig={
+                  canCreate('products') &&
+                  listingImport('products', fetchProducts, (row) =>
+                    types.some((type) => type._id === row.category)
+                      ? []
+                      : ['Type ID does not exist']
+                  )
+                }
                 columns={productColumns}
                 dataSource={products}
                 rowHoverable={false}

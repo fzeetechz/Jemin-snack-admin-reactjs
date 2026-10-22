@@ -27,8 +27,14 @@ type RoleOption = {
 };
 
 const LeavePolicySettingsTab = () => {
-  const { form, addLeavePolicy, updateLeavePolicyField, removeLeavePolicy } =
-    useHrSettingsContext();
+  const {
+    canDeleteSettings,
+    deletingSetting,
+    form,
+    addLeavePolicy,
+    updateLeavePolicyField,
+    removeLeavePolicy,
+  } = useHrSettingsContext();
   const { getRoles } = roleService();
   const [roles, setRoles] = useState<RoleOption[]>([]);
 
@@ -88,16 +94,15 @@ const LeavePolicySettingsTab = () => {
             </Flex>
           }
           extra={
-            form.leavePolicies.length > 1 ? (
-              <Button
-                danger
-                type="text"
-                icon={<DeleteOutlined />}
-                onClick={() => removeLeavePolicy(index)}
-              >
-                Remove
-              </Button>
-            ) : null
+            <Button
+              danger
+              type="text"
+              icon={<DeleteOutlined />}
+              disabled={deletingSetting || (!canDeleteSettings && !!policy._id)}
+              onClick={() => removeLeavePolicy(index)}
+            >
+              {policy._id ? 'Move to Trash' : 'Remove draft'}
+            </Button>
           }
           style={{ borderRadius: 18, border: '1px solid #f0f0f0' }}
         >

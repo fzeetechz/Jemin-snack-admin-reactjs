@@ -52,6 +52,9 @@ export type HrSettingsForm = {
 
 export type HrSettingsContextValue = {
   form: HrSettingsForm;
+  canDeleteSettings: boolean;
+  deletingSetting: boolean;
+  removeWeeklyOffPolicy: () => void;
   setCompanyName: (value: string) => void;
   addShift: () => void;
   updateShift: (

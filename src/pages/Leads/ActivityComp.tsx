@@ -395,7 +395,7 @@ const ActivityComp = (props: any) => {
                       </Flex>
                     </div>
                     <Popconfirm
-                      title="Delete this activity?"
+                      title="Move this activity to Trash?"
                       okText="Delete"
                       okButtonProps={{ danger: true }}
                       cancelText="Cancel"

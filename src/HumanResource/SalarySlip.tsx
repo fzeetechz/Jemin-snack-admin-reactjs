@@ -1,4 +1,5 @@
 import { Eye as EyeOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
+import { usePermissions } from '../hooks/usePermissions';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { CalendarOutlined, WalletOutlined } from '@ant-design/icons';
@@ -57,6 +58,9 @@ type PayslipSalary = {
 };
 
 type PayslipRecord = {
+  _id?: string;
+  id?: string;
+  payslipId?: string;
   employee: PayslipEmployee;
   period: {
     month: number;
@@ -89,6 +93,7 @@ const decimal = (value: number) =>
   }).format(value || 0);
 
 const SalarySlip = () => {
+  const { canDelete } = usePermissions();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BulkPayslipResponse | null>(null);
@@ -301,7 +306,7 @@ const SalarySlip = () => {
         {data && data.payslips.length === 0 ? (
           <Empty description="No active salary records found for this month." />
         ) : (
-          <ListingTable listingTitle="Payslips" fields={LISTING_FIELDS.payslips} filterKeys={["period.month","period.year"]}
+          <ListingTable trashConfig={{ canDelete: canDelete('payroll'), modelType: 'payslip', getId: (row) => row.payslipId ?? row._id ?? row.id, onComplete: () => fetchPayslips(selectedMonth) }} listingTitle="Payslips" fields={LISTING_FIELDS.payslips} filterKeys={["period.month","period.year"]}
             rowKey={(record) => record.employee._id}
             columns={columns}
             dataSource={data?.payslips ?? []}

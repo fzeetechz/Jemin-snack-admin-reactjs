@@ -308,7 +308,7 @@ const Leave = () => {
           </Space>
         }
       >
-        <ListingTable listingTitle="Leave Requests" fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
+        <ListingTable trashConfig={{ canDelete: canDelete('leave'), modelType: 'leave', onComplete: fetchLeaves }} listingTitle="Leave Requests" fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
           rowKey="_id"
           columns={columns}
           dataSource={filtered}

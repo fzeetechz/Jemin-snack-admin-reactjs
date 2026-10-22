@@ -1,3 +1,4 @@
+import { usePermissions } from '../hooks/usePermissions';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { Button, Card, DatePicker, Space, Tag } from 'antd';
@@ -27,6 +28,7 @@ type User = {
 };
 
 const Location = () => {
+  const { canDelete } = usePermissions();
   const [users, setUsers] = useState<User[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [locationData, setLocationData] = useState(null);
@@ -148,7 +150,7 @@ const Location = () => {
               <Map data={locationData} />
             </div>
           ) : (
-            <ListingTable listingTitle="Staff Locations" onRefresh={getStaffs} fields={LISTING_FIELDS.staff} filterKeys={["status","roleId"]}
+            <ListingTable trashConfig={{ canDelete: canDelete('users'), modelType: 'staff', recordName: (row) => `staff member ${row.firstName} ${row.lastName}`, onComplete: getStaffs }} listingTitle="Staff Locations" onRefresh={getStaffs} fields={LISTING_FIELDS.staff} filterKeys={["status","roleId"]}
               rowKey={(record) => record._id}
               columns={columns}
               dataSource={users}

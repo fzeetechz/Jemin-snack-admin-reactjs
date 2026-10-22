@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trashService } from './trashService';
 import apiClient from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -47,15 +48,7 @@ const useProducts = () => {
     }
   };
 
-  const deleteTypes = async (id: string) => {
-    try {
-      const res = await apiClient.delete(API_ENDPOINTS.PRODUCT.TYPE.DELETE(id));
-      if (res.data.success) getTypes();
-      return res.data;
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const deleteTypes = (id: string) => trashService.move(id, 'productType');
 
   // ================= SUBTYPES =================
 
@@ -94,16 +87,7 @@ const useProducts = () => {
     }
   };
 
-  const deleteSubTypes = async (id: string) => {
-    try {
-      const res = await apiClient.delete(
-        API_ENDPOINTS.PRODUCT.SUBTYPE.DELETE(id)
-      );
-      return res.data;
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const deleteSubTypes = (id: string) => trashService.move(id, 'productSubType');
 
   // ================= PRODUCTS =================
 
@@ -147,17 +131,7 @@ const useProducts = () => {
     }
   };
 
-  const deleteProducts = async (id: string) => {
-    try {
-      const res = await apiClient.delete(
-        API_ENDPOINTS.PRODUCT.PRODUCT.DELETE(id)
-      );
-      if (res.data.success) getProducts();
-      return res.data;
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const deleteProducts = (id: string) => trashService.move(id, 'product');
 
   return {
     types,

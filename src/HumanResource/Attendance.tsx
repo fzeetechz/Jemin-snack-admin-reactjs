@@ -1,4 +1,8 @@
-import { PencilLine as EditOutlined, Eye as EyeOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
+import {
+  PencilLine as EditOutlined,
+  Eye as EyeOutlined,
+  RefreshCw as ReloadOutlined,
+} from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -192,8 +196,7 @@ const parseShiftTime = (value?: string) => {
 
 const Attendance = () => {
   const [form] = Form.useForm<AttendanceFormValues>();
-  const { updateAttendance, deleteAttendance } =
-    attendanceService();
+  const { updateAttendance } = attendanceService();
 
   const { canUpdate, canDelete, canRead } = usePermissions();
   const [records, setRecords] = useState<AttendanceTableRecord[]>([]);
@@ -234,7 +237,11 @@ const Attendance = () => {
         params.endDate = dateRange[1].format('YYYY-MM-DD');
       }
 
-      const items = await fetchAllListingPages<ApiAttendanceRecord>('/attendance', 'items', params);
+      const items = await fetchAllListingPages<ApiAttendanceRecord>(
+        '/attendance',
+        'items',
+        params
+      );
       const mappedRecords = items.map((item) => {
         const employee = item.employeeId;
         const shiftStart = item.shift?.start?.trim() || '-';
@@ -413,34 +420,6 @@ const Attendance = () => {
       console.error('Error updating attendance:', error);
       message.error('Failed to update attendance');
     }
-  };
-
-  const handleDelete = (record: AttendanceTableRecord) => {
-    Modal.confirm({
-      title: 'Delete attendance record?',
-      content: `This will remove ${record.employeeName}'s entry for ${dayjs(
-        record.date
-      ).format('DD MMM YYYY')}.`,
-      okText: 'Delete',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      onOk: async () => {
-        try {
-          const response = (await deleteAttendance(record.id)) as {
-            success?: boolean;
-            message?: string;
-          };
-
-          if (response?.success) {
-            message.success(response.message || 'Attendance record deleted');
-            await fetchAttendance();
-          }
-        } catch (error) {
-          console.error('Error deleting attendance:', error);
-          message.error('Failed to delete attendance');
-        }
-      },
-    });
   };
 
   const handleExport = () => {
@@ -645,11 +624,6 @@ const Attendance = () => {
               Edit
             </Button>
           )}
-          {canDelete('timesheet') && (
-            <Button danger type="text" onClick={() => handleDelete(record)}>
-              Delete
-            </Button>
-          )}
         </Space>
       ),
     },
@@ -808,7 +782,16 @@ const Attendance = () => {
 
         <Card bordered={false}>
           <Spin spinning={loading}>
-            <ListingTable listingTitle="Attendance" fields={LISTING_FIELDS.attendance} filterKeys={["status","department","designation"]}
+            <ListingTable
+              trashConfig={{
+                canDelete: canDelete('attendance'),
+                modelType: 'attendance',
+                onComplete: fetchAttendance,
+                getId: (row) => row.id,
+              }}
+              listingTitle="Attendance"
+              fields={LISTING_FIELDS.attendance}
+              filterKeys={['status', 'department', 'designation']}
               rowKey="id"
               columns={columns}
               dataSource={filteredRecords}

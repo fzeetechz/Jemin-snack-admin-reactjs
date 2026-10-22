@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -43,7 +44,7 @@ const staffService = () => {
 
   const deleteStaff = async (id: any) => {
     try {
-      const response = await apiRequest.delete(API_ENDPOINTS.STAFF.DELETE(id));
+      const response = await trashService.move(id, 'staff');
       return response;
     } catch (error) {
       console.error('Error fetching Staff:', error);

@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../shared/trash/MoveToTrashButton';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { Card } from 'src/components';
 import {
@@ -23,6 +25,7 @@ const fmtDuration = (seconds: number) =>
     .padStart(2, '0')}`;
 
 const SalesDashBoard = () => {
+  const { canDelete } = usePermissions();
   const { getDashboardStats } = dashboaradService();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -242,9 +245,13 @@ const SalesDashBoard = () => {
                   onClick={() => goto(`/crm/calls?callSid=${call?.callSid}`)}
                   hoverable
                 >
-                  <Typography.Text strong>
-                    {call?.leadId?.name || 'Unknown Lead'}
-                  </Typography.Text>
+                  <Flex justify="space-between" wrap gap={8}>
+                    <Typography.Text strong>{call?.leadId?.name || 'Unknown Lead'}</Typography.Text>
+                    {canDelete('calls') && <MoveToTrashButton recordId={call._id} modelType="call" onMoved={async () => {
+                      const response = await getDashboardStats() as { data: unknown };
+                      setStats(response.data);
+                    }} />}
+                  </Flex>
                   <br />
                   <Tag
                     color={call?.direction === 'outgoing' ? 'blue' : 'green'}

@@ -1,4 +1,4 @@
-import { Plus as PlusOutlined, Trash2 as DeleteOutlined, PencilLine as EditOutlined } from 'lucide-react';
+import { Plus as PlusOutlined, PencilLine as EditOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { usePermissions } from 'src/hooks';
 import { useEffect, useState } from 'react';
@@ -14,14 +14,12 @@ import {
   Space,
   message,
   Divider,
-  Popconfirm,
 } from 'antd';
 
 import configService from 'src/services/configService';
 
 const ConfigManager = () => {
-  const { getConfig, createConfig, updateConfig, deleteConfig } =
-    configService();
+  const { getConfig, createConfig, updateConfig } = configService();
 
   const [configs, setConfigs] = useState<any[]>([]);
   const { canCreate, canUpdate, canDelete } = usePermissions();
@@ -72,22 +70,15 @@ const ConfigManager = () => {
       }
 
       setIsModalOpen(false);
-      fetchConfigs();
+      await fetchConfigs();
     } catch (err) {
-      console.log(err);
+      message.error(
+        err instanceof Error
+          ? err.message
+          : 'Unable to move configuration to Trash'
+      );
     }
   };
-
-  const handleDelete = async (id: any) => {
-    try {
-      await deleteConfig(id);
-      message.success('Deleted successfully');
-      fetchConfigs();
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
 
   return (
     <div className="module-page">
@@ -99,18 +90,95 @@ const ConfigManager = () => {
         }}
       >
         <h2 style={{ margin: 0 }}>Configurations</h2>
-        {canCreate('settings') && <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => openModal()}
-        >
-          Add Config
-        </Button>}
+        {canCreate('settings') && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => openModal()}
+          >
+            Add Config
+          </Button>
+        )}
       </div>
 
-<ListingTable listingTitle="Configuration" fields={[{ key: 'key', label: 'Key' }, { key: 'description', label: 'Description' }, { key: 'value', label: 'Values' }]} dataSource={configs} rowKey="_id" loading={loading} onRefresh={fetchConfigs}
-        importConfig={canCreate('settings') && { fields: [{ key: 'key', label: 'Key', required: true, unique: true }, { key: 'description', label: 'Description' }, { key: 'value', label: 'Values JSON', required: true, type: 'json', example: '[{"value":"new","label":"New","color":"blue","order":1}]' }], create: createConfig, onComplete: fetchConfigs, validate: (row) => Array.isArray(row.value) && row.value.every((item) => item && typeof item.value === 'string' && typeof item.label === 'string') ? [] : ['Values must be an array with value and label strings'] }}
-        columns={[{ title: 'Key', dataIndex: 'key' }, { title: 'Description', dataIndex: 'description' }, { title: 'Values', render: (_, row) => <Space wrap>{[...(row.value ?? [])].sort((a, b) => a.order - b.order).map((item, index) => <Tag key={index} color={item.color}>{item.label}</Tag>)}</Space> }, { title: 'Actions', render: (_, row) => <Space>{canUpdate('settings') && <Button icon={<EditOutlined />} onClick={() => openModal(row)}>Edit</Button>}{canDelete('settings') && <Popconfirm title="Delete configuration?" onConfirm={() => handleDelete(row._id)} okButtonProps={{ danger: true }}><Button danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>}</Space> }]} />
+      <ListingTable
+        trashConfig={{
+          canDelete: canDelete('settings'),
+          modelType: 'config',
+          onComplete: fetchConfigs,
+        }}
+        listingTitle="Configuration"
+        fields={[
+          { key: 'key', label: 'Key' },
+          { key: 'description', label: 'Description' },
+          { key: 'value', label: 'Values' },
+        ]}
+        dataSource={configs}
+        rowKey="_id"
+        loading={loading}
+        onRefresh={fetchConfigs}
+        importConfig={
+          canCreate('settings') && {
+            fields: [
+              { key: 'key', label: 'Key', required: true, unique: true },
+              { key: 'description', label: 'Description' },
+              {
+                key: 'value',
+                label: 'Values JSON',
+                required: true,
+                type: 'json',
+                example:
+                  '[{"value":"new","label":"New","color":"blue","order":1}]',
+              },
+            ],
+            create: createConfig,
+            onComplete: fetchConfigs,
+            validate: (row) =>
+              Array.isArray(row.value) &&
+              row.value.every(
+                (item) =>
+                  item &&
+                  typeof item.value === 'string' &&
+                  typeof item.label === 'string'
+              )
+                ? []
+                : ['Values must be an array with value and label strings'],
+          }
+        }
+        columns={[
+          { title: 'Key', dataIndex: 'key' },
+          { title: 'Description', dataIndex: 'description' },
+          {
+            title: 'Values',
+            render: (_, row) => (
+              <Space wrap>
+                {[...(row.value ?? [])]
+                  .sort((a, b) => a.order - b.order)
+                  .map((item, index) => (
+                    <Tag key={index} color={item.color}>
+                      {item.label}
+                    </Tag>
+                  ))}
+              </Space>
+            ),
+          },
+          {
+            title: 'Actions',
+            render: (_, row) => (
+              <Space>
+                {canUpdate('settings') && (
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => openModal(row)}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </Space>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         title={editingConfig ? '✏️ Edit Config' : '➕ Create Config'}

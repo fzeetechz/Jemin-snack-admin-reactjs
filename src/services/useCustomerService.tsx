@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -17,7 +18,7 @@ const useCustomerService = () => {
     apiRequest.put(API_ENDPOINTS.CUSTOMERS.UPDATE(id), payload);
 
   const deleteCustomer = async (id: string) =>
-    apiRequest.delete(API_ENDPOINTS.CUSTOMERS.DELETE(id));
+    trashService.move(id, 'customer');
 
   const convertLeadToCustomer = async (leadId: string, payload?: any) =>
     apiRequest.post(API_ENDPOINTS.CUSTOMERS.CONVERT(leadId), payload || {});

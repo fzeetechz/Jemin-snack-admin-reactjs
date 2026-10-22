@@ -391,14 +391,14 @@ const StaffPage = () => {
       key: 'actions',
       render: (_: any, record: User) => (
         <Space>
-          {canUpdate('settings.users') && (
+          {canUpdate('users') && (
             <Button
               size="small"
               icon={<EditOutlined />}
               onClick={() => openEditModal(record)}
             />
           )}
-          {canDelete('settings.users') && (
+          {canDelete('users') && (
             <Button
               size="small"
               danger={record.status === 'active'}
@@ -432,7 +432,7 @@ const StaffPage = () => {
       <Card
         title="Staff Management"
         extra={
-          canCreate('settings.users') && (
+          canCreate('users') && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -444,6 +444,7 @@ const StaffPage = () => {
         }
       >
         <ListingTable
+          trashConfig={{ canDelete: canDelete('users'), modelType: 'staff', onComplete: getStaffs }}
           listingTitle="Staff"
           onRefresh={getStaffs}
           fields={LISTING_FIELDS.staff}

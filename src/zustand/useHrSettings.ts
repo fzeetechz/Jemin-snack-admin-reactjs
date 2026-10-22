@@ -1,3 +1,4 @@
+import { trashService } from '../services/trashService';
 import apiClient from 'src/services/api/apiClient';
 import { API_ENDPOINTS } from '../services/api/endpoints';
 import { create } from 'zustand';
@@ -148,9 +149,7 @@ const useHrSettings = create<UseHrSettingsState>((set) => ({
     return response.data;
   },
   deleteShift: async (id) => {
-    const response = await apiClient.delete(
-      API_ENDPOINTS.HR_SETTINGS.SHIFT_DELETE(id)
-    );
+    const response = { data: await trashService.move(id, 'shift') };
     set((state) => ({
       shifts: state.shifts.filter((shift) => shift._id !== id),
     }));
@@ -178,9 +177,7 @@ const useHrSettings = create<UseHrSettingsState>((set) => ({
     return response.data;
   },
   deleteWeeklyOff: async (id) => {
-    const response = await apiClient.delete(
-      API_ENDPOINTS.HR_SETTINGS.WEEKLY_OFF_DELETE(id)
-    );
+    const response = { data: await trashService.move(id, 'weeklyOff') };
     set((state) => ({
       weeklyOffs: state.weeklyOffs.filter((item) => item._id !== id),
     }));
@@ -212,9 +209,7 @@ const useHrSettings = create<UseHrSettingsState>((set) => ({
     return response.data;
   },
   deleteHoliday: async (id) => {
-    const response = await apiClient.delete(
-      API_ENDPOINTS.HR_SETTINGS.HOLIDAY_DELETE(id)
-    );
+    const response = { data: await trashService.move(id, 'holiday') };
     set((state) => ({
       holidays: state.holidays.filter((item) => item._id !== id),
     }));
@@ -244,9 +239,7 @@ const useHrSettings = create<UseHrSettingsState>((set) => ({
     return response.data;
   },
   deleteLeavePolicy: async (id) => {
-    const response = await apiClient.delete(
-      API_ENDPOINTS.HR_SETTINGS.LEAVE_POLICY_DELETE(id)
-    );
+    const response = { data: await trashService.move(id, 'leavePolicy') };
     set((state) => ({
       leavePolicies: state.leavePolicies.filter((item) => item._id !== id),
     }));

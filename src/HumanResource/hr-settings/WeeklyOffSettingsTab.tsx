@@ -35,6 +35,9 @@ const dayOptions = WEEK_DAYS.map((day) => ({
 const WeeklyOffSettingsTab = () => {
   const {
     form,
+    canDeleteSettings,
+    deletingSetting,
+    removeWeeklyOffPolicy,
     toggleWeeklyOff,
     addMonthlyOffPattern,
     updateMonthlyOffPattern,
@@ -47,9 +50,21 @@ const WeeklyOffSettingsTab = () => {
         bordered={false}
         title="Fixed Weekly Offs"
         extra={
-          <Tag color="blue">
-            {form.weeklyOffPolicy.fixedDays.length} selected
-          </Tag>
+          <Space>
+            <Tag color="blue">
+              {form.weeklyOffPolicy.fixedDays.length} selected
+            </Tag>
+            {form.weeklyOffPolicy._id && canDeleteSettings && (
+              <Button
+                danger
+                disabled={deletingSetting}
+                icon={<DeleteOutlined />}
+                onClick={removeWeeklyOffPolicy}
+              >
+                Move policy to Trash
+              </Button>
+            )}
+          </Space>
         }
       >
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>

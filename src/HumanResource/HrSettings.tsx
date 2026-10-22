@@ -1,7 +1,15 @@
 import { Save as SaveOutlined } from 'lucide-react';
-import { CheckCircleOutlined, ClockCircleOutlined, CalendarOutlined, DollarOutlined, TeamOutlined, BulbOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  TeamOutlined,
+  BulbOutlined,
+} from '@ant-design/icons';
 import {
   Button,
+  Modal,
   Card,
   Flex,
   Typography,
@@ -13,7 +21,8 @@ import {
   Segmented,
   theme,
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { trashService } from '../services/trashService';
 import CompanySettingsTab from './hr-settings/CompanySettingsTab';
 import HolidaysSettingsTab from './hr-settings/HolidaysSettingsTab';
 import LeavePolicySettingsTab from './hr-settings/LeavePolicySettingsTab';
@@ -126,26 +135,58 @@ const HrSettings = () => {
     saveSettings,
     createShift,
     updateShift: updateShiftApi,
-    deleteShift,
     createWeeklyOff,
     updateWeeklyOff,
     createHoliday,
     updateHoliday: updateHolidayApi,
-    deleteHoliday,
     createLeavePolicy,
     updateLeavePolicy,
-    deleteLeavePolicy,
   } = useHrSettings();
   const [form, setForm] = useState<HrSettingsForm>(DEFAULT_HR_SETTINGS_FORM);
   const [activeKey, setActiveKey] = useState('company');
-  const [deletedShiftIds, setDeletedShiftIds] = useState<string[]>([]);
-  const [deletedLeavePolicyIds, setDeletedLeavePolicyIds] = useState<string[]>(
-    []
-  );
-  const [deletedHolidayIds, setDeletedHolidayIds] = useState<string[]>([]);
   const [savingProgress, setSavingProgress] = useState<number | null>(null);
 
-  const { canUpdate } = usePermissions();
+  const { canUpdate, canDelete } = usePermissions();
+  const deletingIds = useRef(new Set<string>());
+  const [deletingSetting, setDeletingSetting] = useState(false);
+  const moveSavedSetting = (
+    id: string | undefined,
+    model: string,
+    remove: () => void
+  ) => {
+    if (!id) {
+      remove();
+      return;
+    }
+    if (!canDelete('settings') || deletingIds.current.has(id)) return;
+    Modal.confirm({
+      title: 'Move this setting to Trash?',
+      content:
+        'This takes effect immediately. You can restore it from the Trash page.',
+      okText: 'Move to Trash',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        if (deletingIds.current.has(id)) return;
+        deletingIds.current.add(id);
+        setDeletingSetting(true);
+        try {
+          await trashService.move(id, model);
+          remove();
+          message.success('Moved to Trash');
+        } catch (error) {
+          message.error(
+            error instanceof Error
+              ? error.message
+              : 'Unable to move setting to Trash'
+          );
+          throw error;
+        } finally {
+          deletingIds.current.delete(id);
+          setDeletingSetting(deletingIds.current.size > 0);
+        }
+      },
+    });
+  };
   const activeSection = tabMeta[activeKey] ?? tabMeta.company;
 
   const setCompanyName = (value: string) => {
@@ -176,15 +217,25 @@ const HrSettings = () => {
   };
 
   const removeShift = (index: number) => {
-    const shiftToRemove = form.shifts[index];
-    if (shiftToRemove?._id) {
-      setDeletedShiftIds((prev) => [...prev, shiftToRemove._id as string]);
-    }
-    setForm((prev) => ({
-      ...prev,
-      shifts: prev.shifts.filter((_, shiftIndex) => shiftIndex !== index),
-    }));
+    const item = form.shifts[index];
+    if (!item) return;
+    moveSavedSetting(item._id, 'shift', () =>
+      setForm((prev) => ({
+        ...prev,
+        shifts: prev.shifts.filter((row) =>
+          item._id ? row._id !== item._id : row !== item
+        ),
+      }))
+    );
   };
+
+  const removeWeeklyOffPolicy = () =>
+    moveSavedSetting(form.weeklyOffPolicy._id, 'weeklyOff', () => {
+      setForm((prev) => ({
+        ...prev,
+        weeklyOffPolicy: { fixedDays: [], monthlyPatterns: [] },
+      }));
+    });
 
   const toggleWeeklyOff = (day: string) => {
     setForm((prev) => ({
@@ -261,16 +312,16 @@ const HrSettings = () => {
   };
 
   const removeHoliday = (index: number) => {
-    const holidayToRemove = form.holidays[index];
-    if (holidayToRemove?._id) {
-      setDeletedHolidayIds((prev) => [...prev, holidayToRemove._id as string]);
-    }
-    setForm((prev) => ({
-      ...prev,
-      holidays: prev.holidays.filter(
-        (_, holidayIndex) => holidayIndex !== index
-      ),
-    }));
+    const item = form.holidays[index];
+    if (!item) return;
+    moveSavedSetting(item._id, 'holiday', () =>
+      setForm((prev) => ({
+        ...prev,
+        holidays: prev.holidays.filter((row) =>
+          item._id ? row._id !== item._id : row !== item
+        ),
+      }))
+    );
   };
 
   const updateSalary = (key: keyof HrSalaryRules, value: number | string) => {
@@ -319,24 +370,20 @@ const HrSettings = () => {
   };
 
   const removeLeavePolicy = (index: number) => {
-    const policyToRemove = form.leavePolicies[index];
-    if (policyToRemove?._id) {
-      setDeletedLeavePolicyIds((prev) => [
+    const item = form.leavePolicies[index];
+    if (!item) return;
+    moveSavedSetting(item._id, 'leavePolicy', () =>
+      setForm((prev) => ({
         ...prev,
-        policyToRemove._id as string,
-      ]);
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      leavePolicies: prev.leavePolicies.filter(
-        (_, policyIndex) => policyIndex !== index
-      ),
-    }));
+        leavePolicies: prev.leavePolicies.filter((row) =>
+          item._id ? row._id !== item._id : row !== item
+        ),
+      }))
+    );
   };
 
   const handleSave = () => {
-    console.log(form);
+    if (deletingSetting || savingProgress !== null) return;
     void (async () => {
       try {
         setSavingProgress(0);
@@ -362,13 +409,7 @@ const HrSettings = () => {
 
         if (activeKey === 'shifts') {
           let completed = 0;
-          const total = deletedShiftIds.length + form.shifts.length;
-
-          for (const id of deletedShiftIds) {
-            await deleteShift(id);
-            completed++;
-            setSavingProgress((completed / total) * 100);
-          }
+          const total = form.shifts.length;
 
           for (const shift of form.shifts) {
             const payload = {
@@ -390,7 +431,6 @@ const HrSettings = () => {
             setSavingProgress((completed / total) * 100);
           }
 
-          setDeletedShiftIds([]);
           await fetchAll();
           message.success(
             `${form.shifts.length} shift configurations saved successfully.`
@@ -426,14 +466,7 @@ const HrSettings = () => {
 
         if (activeKey === 'leave-policy') {
           let completed = 0;
-          const total =
-            deletedLeavePolicyIds.length + form.leavePolicies.length || 1;
-
-          for (const id of deletedLeavePolicyIds) {
-            await deleteLeavePolicy(id);
-            completed++;
-            setSavingProgress((completed / total) * 100);
-          }
+          const total = form.leavePolicies.length || 1;
 
           for (const policy of form.leavePolicies) {
             const payload = {
@@ -457,7 +490,6 @@ const HrSettings = () => {
             setSavingProgress((completed / total) * 100);
           }
 
-          setDeletedLeavePolicyIds([]);
           await fetchAll();
           message.success('Leave policies saved successfully.');
           setSavingProgress(null);
@@ -466,13 +498,7 @@ const HrSettings = () => {
 
         if (activeKey === 'holidays') {
           let completed = 0;
-          const total = deletedHolidayIds.length + form.holidays.length || 1;
-
-          for (const id of deletedHolidayIds) {
-            await deleteHoliday(id);
-            completed++;
-            setSavingProgress((completed / total) * 100);
-          }
+          const total = form.holidays.length || 1;
 
           for (const holiday of form.holidays) {
             const payload = {
@@ -491,7 +517,6 @@ const HrSettings = () => {
             setSavingProgress((completed / total) * 100);
           }
 
-          setDeletedHolidayIds([]);
           await fetchAll();
           message.success('Holiday calendar saved successfully.');
           setSavingProgress(null);
@@ -514,6 +539,9 @@ const HrSettings = () => {
     addShift,
     updateShift,
     removeShift,
+    removeWeeklyOffPolicy,
+    canDeleteSettings: canDelete('settings'),
+    deletingSetting,
     toggleWeeklyOff,
     addMonthlyOffPattern,
     updateMonthlyOffPattern,
@@ -657,12 +685,13 @@ const HrSettings = () => {
                 </div>
               )}
               <Tooltip title="Save all changes in current section">
-                {canUpdate('config') && (
+                {canUpdate('settings') && (
                   <Button
                     type="primary"
                     icon={<SaveOutlined />}
                     onClick={handleSave}
-                    loading={loading}
+                    loading={loading || savingProgress !== null}
+                    disabled={deletingSetting}
                     size="large"
                     style={{
                       minWidth: 156,

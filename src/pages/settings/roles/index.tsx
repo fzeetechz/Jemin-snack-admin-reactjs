@@ -1,6 +1,9 @@
-import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined } from 'lucide-react';
+import { Plus as PlusOutlined, PencilLine as EditOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import {
+  LISTING_FIELDS,
+  listingImport,
+} from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Card,
@@ -15,10 +18,8 @@ import {
   Col,
   message,
   Divider,
-  Modal,
   Select,
 } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
 import {
   getModuleConfig,
   PermissionObj,
@@ -60,7 +61,7 @@ const RolesPage = () => {
   );
 
   const { canCreate, canUpdate, canDelete } = usePermissions();
-  const { getRoles, createRoles, deleteRoles, updateRoles } = roleService();
+  const { getRoles, createRoles, updateRoles } = roleService();
 
   const allGroups = getAllGroups();
 
@@ -111,37 +112,6 @@ const RolesPage = () => {
     });
     setSelectedPermissions(role.permissions || []);
     setIsDrawerOpen(true);
-  };
-
-  const handleDeleteRole = (role: Role) => {
-    if (role.isSystem) {
-      message.error('System roles cannot be deleted');
-      return;
-    }
-
-    Modal.confirm({
-      title: 'Delete Role',
-      icon: <ExclamationCircleOutlined />,
-      content: `Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`,
-      okText: 'Delete',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      onOk() {
-        if (!role._id) {
-          message.error('Role ID is missing');
-          return;
-        }
-        deleteRoles(role._id).then((res: any) => {
-          if (res.success) {
-            getAllRoles();
-            setRoles(roles.filter((r) => r._id !== role._id));
-            message.success(res.message || 'Role deleted successfully');
-          } else {
-            message.error(res.message || 'Failed to delete role');
-          }
-        });
-      },
-    });
   };
 
   const columns = [
@@ -200,23 +170,13 @@ const RolesPage = () => {
       key: 'actions',
       render: (role: Role) => (
         <Space>
-          {canUpdate('settings.roles') && (
+          {canUpdate('roles') && (
             <Button
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEditRole(role)}
               disabled={role.isSystem}
               title={role.isSystem ? 'System roles cannot be edited' : ''}
-            />
-          )}
-          {canDelete('settings.roles') && (
-            <Button
-              size="small"
-              onClick={() => handleDeleteRole(role)}
-              danger
-              icon={<DeleteOutlined />}
-              disabled={role.isSystem}
-              title={role.isSystem ? 'System roles cannot be deleted' : ''}
             />
           )}
         </Space>
@@ -362,7 +322,7 @@ const RolesPage = () => {
       <Card
         title="Roles & Permissions"
         extra={
-          canCreate('settings.roles') && (
+          canCreate('roles') && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -373,7 +333,21 @@ const RolesPage = () => {
           )
         }
       >
-        <ListingTable listingTitle="Roles" onRefresh={getAllRoles} fields={LISTING_FIELDS.roles} filterKeys={["isSystem"]} importConfig={canCreate('settings.roles') && listingImport('roles', getAllRoles)}
+        <ListingTable
+          trashConfig={{
+            canDelete: canDelete('roles'),
+            modelType: 'role',
+            onComplete: getAllRoles,
+            disabledReason: (row) =>
+              row.isSystem ? 'System roles cannot be deleted.' : undefined,
+          }}
+          listingTitle="Roles"
+          onRefresh={getAllRoles}
+          fields={LISTING_FIELDS.roles}
+          filterKeys={['isSystem']}
+          importConfig={
+            canCreate('roles') && listingImport('roles', getAllRoles)
+          }
           rowKey={(record) => record._id || record.id || record.name}
           columns={columns}
           dataSource={roles}

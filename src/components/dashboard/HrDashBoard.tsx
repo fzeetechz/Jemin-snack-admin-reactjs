@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../shared/trash/MoveToTrashButton';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { Col, Row, Tag, Typography, Spin, Table, Flex, Button } from 'antd';
 import { Card } from 'src/components';
@@ -19,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 const { Text } = Typography;
 
 const HrDashBoard = () => {
+  const { canDelete } = usePermissions();
   const navigate = useNavigate();
   const { getAttendanceList } = attendanceService();
   const { getAllLeaves } = leaveService();
@@ -401,7 +404,24 @@ const HrDashBoard = () => {
             >
               <Table
                 rowKey="_id"
-                columns={leaveColumns}
+                columns={[
+                  ...leaveColumns,
+                  ...(canDelete('leave')
+                    ? [
+                        {
+                          title: 'Trash',
+                          key: '__trash',
+                          render: (_: unknown, row: { _id?: string }) => (
+                            <MoveToTrashButton
+                              recordId={row._id}
+                              modelType="leave"
+                              onMoved={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 dataSource={pendingLeaves}
                 pagination={false}
                 size="small"
@@ -425,7 +445,24 @@ const HrDashBoard = () => {
             >
               <Table
                 rowKey="_id"
-                columns={candidateColumns}
+                columns={[
+                  ...candidateColumns,
+                  ...(canDelete('candidates')
+                    ? [
+                        {
+                          title: 'Trash',
+                          key: '__trash',
+                          render: (_: unknown, row: { _id?: string }) => (
+                            <MoveToTrashButton
+                              recordId={row._id}
+                              modelType="candidate"
+                              onMoved={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 dataSource={recentCandidates}
                 pagination={false}
                 size="small"

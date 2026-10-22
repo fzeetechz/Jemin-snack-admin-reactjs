@@ -18,8 +18,14 @@ import { useHrSettingsContext } from './context';
 const { Text } = Typography;
 
 const HolidaysSettingsTab = () => {
-  const { form, addHoliday, updateHoliday, removeHoliday } =
-    useHrSettingsContext();
+  const {
+    canDeleteSettings,
+    deletingSetting,
+    form,
+    addHoliday,
+    updateHoliday,
+    removeHoliday,
+  } = useHrSettingsContext();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
 
   const addHolidayFromCalendar = (value: Dayjs) => {
@@ -108,6 +114,9 @@ const HolidaysSettingsTab = () => {
                     type="text"
                     danger
                     icon={<DeleteOutlined />}
+                    disabled={
+                      deletingSetting || (!canDeleteSettings && !!holiday._id)
+                    }
                     onClick={() => removeHoliday(index)}
                   />
                 }

@@ -1,7 +1,15 @@
-import { Trash2 as DeleteOutlined, PencilLine as EditOutlined, Eye as EyeOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
+import {
+  PencilLine as EditOutlined,
+  Eye as EyeOutlined,
+  Plus as PlusOutlined,
+  RefreshCw as ReloadOutlined,
+} from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import {
+  LISTING_FIELDS,
+  listingImport,
+} from 'src/components/shared/listing/listing-presets';
 import { useEffect, useState } from 'react';
 import {
   Avatar,
@@ -14,7 +22,6 @@ import {
   Form,
   Input,
   Modal,
-  Popconfirm,
   Row,
   Select,
   Space,
@@ -23,7 +30,11 @@ import {
   Typography,
   message,
 } from 'antd';
-import { TeamOutlined, UserOutlined, BranchesOutlined } from '@ant-design/icons';
+import {
+  TeamOutlined,
+  UserOutlined,
+  BranchesOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import useCustomerService from 'src/services/useCustomerService';
 import { usePermissions } from 'src/hooks';
@@ -63,8 +74,7 @@ type Customer = {
 };
 
 const CustomersPage = () => {
-  const { createCustomer, updateCustomer, deleteCustomer } =
-    useCustomerService();
+  const { createCustomer, updateCustomer } = useCustomerService();
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const { getState } = stateService();
   const { getLeads } = leadServices();
@@ -73,7 +83,6 @@ const CustomersPage = () => {
   const [, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
@@ -89,7 +98,11 @@ const CustomersPage = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      setCustomers((await fetchAllListingPages<Customer>('/customers', 'customers')).reverse());
+      setCustomers(
+        (
+          await fetchAllListingPages<Customer>('/customers', 'customers')
+        ).reverse()
+      );
     } catch {
       message.error('Unable to load customers');
     } finally {
@@ -194,19 +207,6 @@ const CustomersPage = () => {
       if (!(err as any)?.errorFields) message.error('Unable to save customer');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      setDeletingId(id);
-      await deleteCustomer(id);
-      message.success('Customer deleted');
-      await fetchCustomers();
-    } catch {
-      message.error('Unable to delete customer');
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -325,24 +325,6 @@ const CustomersPage = () => {
               />
             </Tooltip>
           )}
-          {canDelete('customers') && (
-            <Popconfirm
-              title="Delete customer?"
-              description={`Delete "${r.name}"?`}
-              okText="Delete"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => handleDelete(r._id)}
-            >
-              <Tooltip title="Delete">
-                <Button
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  loading={deletingId === r._id}
-                />
-              </Tooltip>
-            </Popconfirm>
-          )}
         </Space>
       ),
     },
@@ -380,10 +362,20 @@ const CustomersPage = () => {
           </Space>
         </Flex>
 
-        <Card
-          title="Customer List"
-        >
-          <ListingTable listingTitle="Customers" fields={LISTING_FIELDS.customers} filterKeys={["type","isActive","address.city"]} importConfig={canCreate('customers') && listingImport('customers', fetchCustomers)}
+        <Card title="Customer List">
+          <ListingTable
+            trashConfig={{
+              canDelete: canDelete('customers'),
+              modelType: 'customer',
+              onComplete: fetchCustomers,
+            }}
+            listingTitle="Customers"
+            fields={LISTING_FIELDS.customers}
+            filterKeys={['type', 'isActive', 'address.city']}
+            importConfig={
+              canCreate('customers') &&
+              listingImport('customers', fetchCustomers)
+            }
             rowKey="_id"
             columns={columns}
             dataSource={customers}

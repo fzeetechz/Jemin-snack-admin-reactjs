@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../components/shared/trash/MoveToTrashButton';
+import { usePermissions } from '../hooks/usePermissions';
 import { PencilLine as EditOutlined, Eye as EyeOutlined, Download as DownloadOutlined, X as CloseOutlined } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
@@ -19,7 +21,7 @@ import {
 import { FileTextOutlined, CheckSquareOutlined, SafetyCertificateOutlined, SendOutlined, UserAddOutlined, MailOutlined, PhoneOutlined, PrinterOutlined } from '@ant-design/icons';
 import { BASEURL } from 'src/services/api/apiClient';
 import candidateService from 'src/services/candidateService';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Templates from 'src/components/Templates';
 import { SiMinutemailer } from 'react-icons/si';
 import DocumentForm from 'src/components/DocumentForm';
@@ -141,6 +143,8 @@ const _documents = [
 const TABS = ['Documents', 'Details'];
 
 const SigleCandidate = () => {
+  const navigate = useNavigate();
+  const { canDelete } = usePermissions();
   const { candidateId } = useParams<{ candidateId: string }>();
   const [documents, setdocuments] = useState(_documents);
   const { getById, updateCandidate, downloadPdf, sendEmail, downloading } =
@@ -363,6 +367,7 @@ const SigleCandidate = () => {
             </div>
           </Flex>
           <Space>
+            {canDelete('candidates') && <MoveToTrashButton size="large" recordId={candidateId} modelType="candidate" recordName={candidate.name} onMoved={() => navigate('/hrms/candidate', { replace: true })} />}
             <Button
               onClick={() => sendEmailApi('ALL')}
               type="primary"

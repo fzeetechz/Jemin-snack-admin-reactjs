@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import apiClient, { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -79,9 +80,7 @@ const taskService = () => {
 
   const deleteTasks = async (id: any) => {
     try {
-      const response = await apiRequest.delete(
-        API_ENDPOINTS.TASK.DELETE_BY_ID(id)
-      );
+      const response = await trashService.move(id, 'task');
       console.log(response);
       return response;
     } catch (error) {

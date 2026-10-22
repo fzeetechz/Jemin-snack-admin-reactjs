@@ -24,6 +24,8 @@ import {
   Upload as UploadIcon,
   ListFilter,
 } from 'lucide-react';
+import MoveToTrashButton from '../trash/MoveToTrashButton';
+import { withTrashActions } from './listing-trash';
 import { exportListing } from './listing-export';
 import {
   displayValue,
@@ -42,6 +44,16 @@ export interface ListingImport {
   validate?: (row: ImportRow) => string[];
 }
 interface ListingTableProps<T extends object> extends TableProps<T> {
+  trashConfig?:
+    | {
+        modelType: string;
+        canDelete?: boolean;
+        getId?: (row: T) => string | undefined;
+        onComplete: () => Promise<unknown> | void;
+        disabledReason?: (row: T) => string | undefined;
+        recordName?: (row: T) => string | undefined;
+      }
+    | false;
   listingTitle: string;
   searchPlaceholder?: string;
   fields: ListingField[];
@@ -54,6 +66,7 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
 }
 
 export default function ListingTable<T extends object>({
+  trashConfig,
   listingTitle,
   searchPlaceholder,
   fields,
@@ -79,6 +92,14 @@ export default function ListingTable<T extends object>({
   const [importRows, setImportRows] = useState<ValidatedRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [reading, setReading] = useState(false);
+  const [trashedIds, setTrashedIds] = useState<Set<string>>(new Set());
+  const getTrashId = (row: T) =>
+    trashConfig
+      ? trashConfig.getId?.(row) ??
+        (trashConfig.getId
+          ? undefined
+          : String(getValue(row, '_id') ?? getValue(row, 'id') ?? ''))
+      : undefined;
   const [importError, setImportError] = useState('');
   const [importedCount, setImportedCount] = useState(0);
   const dateKey = !serverSide
@@ -90,10 +111,11 @@ export default function ListingTable<T extends object>({
     : undefined;
   const filtered = useMemo(
     () =>
-      serverSide
+      (serverSide
         ? [...dataSource]
-        : filterRows(dataSource, search, filters, fields),
-    [dataSource, search, filters, fields, serverSide]
+        : filterRows(dataSource, search, filters, fields)
+      ).filter((row) => !trashedIds.has(getTrashId(row) ?? '')),
+    [dataSource, search, filters, fields, serverSide, trashedIds, trashConfig]
   );
   useEffect(() => {
     setPage(1);
@@ -103,7 +125,7 @@ export default function ListingTable<T extends object>({
     setFilters(next);
     onFiltersChange?.(query, next);
   };
-  const tableColumns: TableProps<T>['columns'] = [
+  const baseColumns: NonNullable<TableProps<T>['columns']> = [
     ...columns.map((column) => {
       if ('children' in column) return column;
       const field =
@@ -149,6 +171,29 @@ export default function ListingTable<T extends object>({
       ),
     },
   ];
+  const tableColumns = trashConfig
+    ? withTrashActions(baseColumns, (row) => {
+        const id = getTrashId(row);
+        return (
+          <MoveToTrashButton
+            recordId={id}
+            modelType={trashConfig.modelType}
+            recordName={trashConfig.recordName?.(row)}
+            disabledReason={
+              trashConfig.canDelete === false
+                ? 'You do not have permission to delete these records.'
+                : trashConfig.disabledReason?.(row)
+            }
+            onMoved={async () => {
+              if (id) setTrashedIds((previous) => new Set([...previous, id]));
+              await trashConfig.onComplete();
+            }}
+          >
+            Delete
+          </MoveToTrashButton>
+        );
+      })
+    : baseColumns;
   const download = async (format: 'excel' | 'pdf' | 'doc') => {
     try {
       setExporting(true);

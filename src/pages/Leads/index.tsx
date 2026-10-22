@@ -1,7 +1,14 @@
-import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined, Eye as EyeOutlined } from 'lucide-react';
+import {
+  Plus as PlusOutlined,
+  PencilLine as EditOutlined,
+  Eye as EyeOutlined,
+} from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
+import {
+  LISTING_FIELDS,
+  listingImport,
+} from 'src/components/shared/listing/listing-presets';
 import { useState, useEffect } from 'react';
 import {
   Card,
@@ -16,11 +23,10 @@ import {
   Drawer,
   Form,
   Space,
-  Modal,
   message,
   Upload,
 } from 'antd';
-import { PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { PhoneOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { UserAvatar } from '../../components';
@@ -54,12 +60,7 @@ const LeadsPage = () => {
   //   window.location.href = `jeminisnacks://lead/${id}`;
   // };
 
-  const {
-    creatLeads,
-    deleteLeads,
-    updateLeads,
-    addAttachements,
-  } = leadServices();
+  const { creatLeads, updateLeads, addAttachements } = leadServices();
   const { getStaff } = staffService();
   const [allStates, setAllStates] = useState([]);
   const [allCities, setAllCities] = useState([]);
@@ -160,7 +161,11 @@ const LeadsPage = () => {
   }, []);
 
   const fetchLeads = async () => {
-    try { setLeads(await fetchAllListingPages<Lead>('/leads', 'items')); } catch { message.error('Unable to load leads'); }
+    try {
+      setLeads(await fetchAllListingPages<Lead>('/leads', 'items'));
+    } catch {
+      message.error('Unable to load leads');
+    }
   };
 
   const handleStateChange = async (stateName: string) => {
@@ -249,24 +254,6 @@ const LeadsPage = () => {
       contacted_today: !!record.lastContactedAt,
     });
     setIsDrawerOpen(true);
-  };
-
-  const handleDelete = (record: Lead) => {
-    Modal.confirm({
-      title: 'Delete Lead',
-      icon: <ExclamationCircleOutlined />,
-      content: `Are you sure you want to delete "${record.name}"?`,
-      okText: 'Delete',
-      okType: 'danger',
-      onOk: async () => {
-        const res = (await deleteLeads(record._id)) as any;
-        if (res.success) {
-          message.success(res.message);
-          await fetchLeads();
-        }
-        // Call delete API here
-      },
-    });
   };
 
   const handleSaveLead = async () => {
@@ -429,14 +416,6 @@ const LeadsPage = () => {
                   onClick={() => handleEdit(record)}
                 />
               )}
-              {canDelete('leads') && (
-                <Button
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDelete(record)}
-                />
-              )}
             </>
           )}
         </Space>
@@ -474,7 +453,19 @@ const LeadsPage = () => {
               )
             }
           >
-            <ListingTable listingTitle="Leads" onRefresh={fetchLeads} fields={LISTING_FIELDS.leads} filterKeys={["status","source","priority","assignedTo"]} importConfig={canCreate('leads') && listingImport('leads', fetchLeads)}
+            <ListingTable
+              trashConfig={{
+                canDelete: canDelete('leads'),
+                modelType: 'lead',
+                onComplete: fetchLeads,
+              }}
+              listingTitle="Leads"
+              onRefresh={fetchLeads}
+              fields={LISTING_FIELDS.leads}
+              filterKeys={['status', 'source', 'priority', 'assignedTo']}
+              importConfig={
+                canCreate('leads') && listingImport('leads', fetchLeads)
+              }
               rowKey="_id"
               columns={columns}
               dataSource={leads}
@@ -748,7 +739,6 @@ const LeadsPage = () => {
           </Row> */}
         </Form>
       </Drawer>
-
     </div>
   );
 };

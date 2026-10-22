@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import axios from 'axios';
 import { apiRequest, BASEURL } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
@@ -55,9 +56,7 @@ const candidateService = () => {
   };
   const deleteCandidate = async (id?: any) => {
     try {
-      const response = await apiRequest.delete(
-        API_ENDPOINTS.CANDIDATES.DELETE(id)
-      );
+      const response = await trashService.move(id, 'candidate');
       console.log(response);
       return response;
     } catch (error) {

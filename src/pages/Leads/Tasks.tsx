@@ -1,4 +1,4 @@
-import { Plus as PlusOutlined, PencilLine as EditOutlined, Trash2 as DeleteOutlined, Eye as EyeOutlined, Upload as UploadOutlined } from 'lucide-react';
+import { Plus as PlusOutlined, PencilLine as EditOutlined, Eye as EyeOutlined, Upload as UploadOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
 import {
@@ -58,7 +58,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
     createTask,
     getByLeadId,
     getTasksList,
-    deleteTasks,
     updateTask,
     addAttachement,
   } = taskService();
@@ -246,20 +245,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
           });
         }
 
-        if (canDelete('tasks')) {
-          if (items.length > 0) {
-            items.push({
-              type: 'divider',
-            });
-          }
-          items.push({
-            key: 'delete',
-            icon: <DeleteOutlined />,
-            label: 'Delete',
-            danger: true,
-            onClick: () => handleDelete(record._id),
-          });
-        }
 
         return (
           <Dropdown
@@ -293,26 +278,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
     });
     setRelatedType(record.relatedTo?.type || 'Lead');
     setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id: any) => {
-    Modal.confirm({
-      title: 'Delete Task',
-      content: 'Are you sure you want to delete this task?',
-      okText: 'Delete',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          const res = (await deleteTasks(id)) as any;
-          if (res.success) {
-            message.success('Task deleted successfully');
-            setTasks(tasks.filter((task) => task._id !== id));
-          }
-        } catch (error) {
-          message.error('Failed to delete task');
-        }
-      },
-    });
   };
 
   const handleLeadSearch = async (value: string) => {
@@ -445,7 +410,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
           </Space>
         }
       >
-        <ListingTable listingTitle="Tasks" onRefresh={fetchTasks} fields={LISTING_FIELDS.tasks} filterKeys={["status","priority","assignee"]} importConfig={canCreate('tasks') && listingImport('tasks', fetchTasks)}
+        <ListingTable trashConfig={{ canDelete: canDelete('tasks'), modelType: 'task', onComplete: fetchTasks }} listingTitle="Tasks" onRefresh={fetchTasks} fields={LISTING_FIELDS.tasks} filterKeys={["status","priority","assignee"]} importConfig={canCreate('tasks') && listingImport('tasks', fetchTasks)}
           columns={columns}
           dataSource={tasks}
           rowKey="_id"

@@ -123,7 +123,7 @@ const rowStyle: React.CSSProperties = {
 
 const SalarySetting = () => {
   const { getEmployeDetailsWithSalary, employeSalary, getSalaryWithStaffId, employe, createSalary, updateSalary } = useSalary();
-  const { canCreate, canUpdate, hasPermission } = usePermissions();
+  const { canCreate, canUpdate, canDelete, hasPermission } = usePermissions();
   const [allStaffs, setAllStaffs] = useState<Staff[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Staff | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -268,6 +268,7 @@ const SalarySetting = () => {
           }
         >
           <ListingTable
+            trashConfig={{ canDelete: canDelete('salary'), modelType: 'salary', getId: (row) => row.salaryId, onComplete: getEmployeDetailsWithSalary }}
             listingTitle="Salary Settings"
             fields={LISTING_FIELDS.salary}
             filterKeys={['status', 'roleId', 'isSalaryAssigned']}

@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../shared/trash/MoveToTrashButton';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { Card } from 'src/components';
 import {
@@ -29,6 +31,7 @@ import dayjs from 'dayjs';
 const { Text } = Typography;
 
 const Administration = () => {
+  const { canDelete } = usePermissions();
   const navigate = useNavigate();
   const { getDashboardStats } = dashboaradService();
   const { getStaff } = staffService();
@@ -44,44 +47,42 @@ const Administration = () => {
     onLeave: 0,
   });
 
+  const fetchAll = async () => {
+    setLoading(true);
+    const today = dayjs().format('YYYY-MM-DD');
+
+    const [statsRes, staffRes, attendanceRes] = await Promise.allSettled([
+      getDashboardStats(),
+      getStaff({ limit: 5, sort: '-createdAt' }),
+      getAttendanceList({ startDate: today, endDate: today, limit: '200' }),
+    ]);
+
+    if (statsRes.status === 'fulfilled')
+      setStats((statsRes.value as any)?.data);
+
+    if (staffRes.status === 'fulfilled') {
+      const data = (staffRes.value as any)?.data;
+      setRecentStaff(
+        Array.isArray(data) ? data.slice(0, 5) : data?.items?.slice(0, 5) ?? []
+      );
+    }
+
+    if (attendanceRes.status === 'fulfilled') {
+      const items: any[] = (attendanceRes.value as any)?.data?.items ?? [];
+      setAttendanceSummary({
+        present: items.filter((i) => i.status === 'present').length,
+        late: items.filter((i) => i.status === 'late').length,
+        absent: items.filter((i) => i.status === 'absent').length,
+        onLeave: items.filter(
+          (i) => i.status === 'leave' || i.status === 'half_day'
+        ).length,
+      });
+    }
+
+    setLoading(false);
+  };
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      const today = dayjs().format('YYYY-MM-DD');
-
-      const [statsRes, staffRes, attendanceRes] = await Promise.allSettled([
-        getDashboardStats(),
-        getStaff({ limit: 5, sort: '-createdAt' }),
-        getAttendanceList({ startDate: today, endDate: today, limit: '200' }),
-      ]);
-
-      if (statsRes.status === 'fulfilled')
-        setStats((statsRes.value as any)?.data);
-
-      if (staffRes.status === 'fulfilled') {
-        const data = (staffRes.value as any)?.data;
-        setRecentStaff(
-          Array.isArray(data)
-            ? data.slice(0, 5)
-            : data?.items?.slice(0, 5) ?? []
-        );
-      }
-
-      if (attendanceRes.status === 'fulfilled') {
-        const items: any[] = (attendanceRes.value as any)?.data?.items ?? [];
-        setAttendanceSummary({
-          present: items.filter((i) => i.status === 'present').length,
-          late: items.filter((i) => i.status === 'late').length,
-          absent: items.filter((i) => i.status === 'absent').length,
-          onLeave: items.filter(
-            (i) => i.status === 'leave' || i.status === 'half_day'
-          ).length,
-        });
-      }
-
-      setLoading(false);
-    };
-    fetchAll();
+    void fetchAll();
   }, []);
 
   const kpiCards = [
@@ -305,7 +306,24 @@ const Administration = () => {
             >
               <Table
                 rowKey="_id"
-                columns={staffColumns}
+                columns={[
+                  ...staffColumns,
+                  ...(canDelete('users')
+                    ? [
+                        {
+                          title: 'Trash',
+                          key: '__trash',
+                          render: (_: unknown, row: { _id?: string }) => (
+                            <MoveToTrashButton
+                              recordId={row._id}
+                              modelType="staff"
+                              onMoved={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 dataSource={recentStaff}
                 pagination={false}
                 rowHoverable={false}

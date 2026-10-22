@@ -72,6 +72,7 @@ import Leave from 'src/HumanResource/Leave.tsx';
 import Candidate from 'src/HumanResource/Candidate.tsx';
 import SigleCandidate from 'src/HumanResource/SigleCandidate.tsx';
 import ConfigPage from 'src/pages/Config/index.tsx';
+import TrashPage from '../pages/trash';
 
 import Location from 'src/pages/Location.tsx';
 import Products from 'src/pages/Products/Products.tsx';
@@ -242,6 +243,10 @@ const router = createBrowserRouter([
         element: <QuotationsPage />,
       },
 
+      {
+        path: 'trash',
+        element: <TrashPage />,
+      },
       {
         path: 'config',
         element: <ConfigPage />,

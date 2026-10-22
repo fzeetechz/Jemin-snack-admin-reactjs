@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -42,7 +43,7 @@ const attendanceService = () => {
   };
 
   const deleteAttendance = async (id: string) => {
-    return apiRequest.delete(API_ENDPOINTS.ATTENDANCE.DELETE(id));
+    return trashService.move(id, 'attendance');
   };
 
   return {

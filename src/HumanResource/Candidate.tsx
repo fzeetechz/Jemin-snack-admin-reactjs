@@ -1,23 +1,13 @@
 import ListingTable from 'src/components/shared/listing/ListingTable';
-import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useState } from 'react';
 import {
-  Button,
-  Modal,
-  Form,
-  Input,
-  Tag,
-  Space,
-  Select,
-  Checkbox,
-  message,
-  PopconfirmProps,
-  Popconfirm,
-} from 'antd';
+  LISTING_FIELDS,
+  listingImport,
+} from 'src/components/shared/listing/listing-presets';
+import { useEffect, useState } from 'react';
+import { Button, Modal, Form, Input, Tag, Space, Select, Checkbox } from 'antd';
 import candidateService from 'src/services/candidateService';
 import { Link } from 'react-router-dom';
 import configService from 'src/services/configService';
-import { Trash } from 'lucide-react';
 import { usePermissions } from 'src/hooks';
 
 const statusColors = {
@@ -33,28 +23,10 @@ const Candidate = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [designations, setDesignations] = useState<any>([]);
   const [form] = Form.useForm();
-  const { getCandidates, createCandidates, deleteCandidate } =
-    candidateService();
+  const { getCandidates, createCandidates } = candidateService();
   const { getConfig } = configService();
 
-  const [messageApi] = message.useMessage();
   const { canCreate, canDelete, canRead } = usePermissions();
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const confirm: PopconfirmProps['onConfirm'] = async (e) => {
-    console.log(e);
-    const res = (await deleteCandidate(selectedUser._id)) as any;
-    console.log(res);
-    if (res.success) {
-      messageApi.success(res.message);
-      fetchData();
-    }
-  };
-
-  const cancel: PopconfirmProps['onCancel'] = (e) => {
-    console.log(e);
-    // messageApi.error('Click on No');
-    // fetchData()
-  };
 
   const fetchData = async () => {
     const response = (await getCandidates()) as any;
@@ -125,27 +97,6 @@ const Candidate = () => {
               <Link to={`/hrms/candidate/${record?._id}`}>View</Link>
             </Button>
           )}
-
-          <Popconfirm
-            title="Delete the task"
-            description={`Are you sure to delete this Candidate . ${selectedUser?.name}?`}
-            onConfirm={confirm}
-            onCancel={cancel}
-            okText="Yes"
-            cancelText="No"
-          >
-            {canDelete('candidates') && (
-              <Button
-                onClick={() => setSelectedUser(record)}
-                disabled={!_._id}
-                size="small"
-                danger
-                aria-label="Delete candidate"
-              >
-                <Trash size={15} />
-              </Button>
-            )}
-          </Popconfirm>
         </Space>
       ),
     },
@@ -165,7 +116,24 @@ const Candidate = () => {
         </Button>
       )}
 
-      <ListingTable listingTitle="Candidates" rowKey="_id" onRefresh={fetchData} fields={LISTING_FIELDS.candidates} filterKeys={["status","designation","source"]} importConfig={canCreate('candidates') && listingImport('candidates', fetchData)} rowHoverable={false} columns={columns} dataSource={candidates} />
+      <ListingTable
+        trashConfig={{
+          canDelete: canDelete('candidates'),
+          modelType: 'candidate',
+          onComplete: fetchData,
+        }}
+        listingTitle="Candidates"
+        rowKey="_id"
+        onRefresh={fetchData}
+        fields={LISTING_FIELDS.candidates}
+        filterKeys={['status', 'designation', 'source']}
+        importConfig={
+          canCreate('candidates') && listingImport('candidates', fetchData)
+        }
+        rowHoverable={false}
+        columns={columns}
+        dataSource={candidates}
+      />
 
       {/* Modal */}
       <Modal

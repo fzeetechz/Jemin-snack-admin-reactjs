@@ -43,6 +43,7 @@ export const PATH_CRM = {
   },
   support: '/crm/support',
   config: '/crm/config',
+  trash: '/crm/trash',
 };
 
 export const ROUTE_MODULE_MAP: Record<string, string> = {
@@ -68,6 +69,12 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
 
 // Module definitions with actions
 export const MODULES = {
+  trash: {
+    label: 'Trash',
+    group: 'Administration',
+    actions: ['read', 'update', 'delete'],
+    scopes: ['all'],
+  },
   // HR Module
   staff: {
     label: 'Staff',
@@ -96,7 +103,7 @@ export const MODULES = {
   payroll: {
     label: 'Payroll',
     group: 'Human Resources',
-    actions: ['read'],
+    actions: ['read', 'update', 'delete'],
     scopes: ['all', 'own'],
   },
   candidates: {
@@ -182,7 +189,7 @@ export const MODULES = {
   settings: {
     label: 'Settings',
     group: 'Administration',
-    actions: ['read', 'update'],
+    actions: ['read', 'update', 'delete'],
     scopes: ['all'],
   },
   roles: {
@@ -288,6 +295,9 @@ export const hasRouteAccess = (
 
   const normalizedRoute = normalizeRoute(route);
   if (normalizedRoute === PATH_CRM.dashboard) return true;
+  if (normalizedRoute === PATH_CRM.trash) {
+    return userPermissions.some((permission) => permission.actions.some((action) => ['read', 'view'].includes(action)));
+  }
 
   const module = getRouteModule(normalizedRoute);
   if (!module) return true;

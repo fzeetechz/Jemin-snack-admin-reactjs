@@ -20,6 +20,7 @@ import {
   AudioLines,
   Building2,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -180,6 +181,7 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
   // ]),
 
   getItem('Admin', 'group-admin', null, [], 'group'),
+  getItem(<Link to={PATH_CRM.trash}>Trash</Link>, PATH_CRM.trash, <Trash2 size={19} strokeWidth={1.8} />),
 
   getItem(
     'Settings',
@@ -225,6 +227,7 @@ function filterMenuByRole(
     if (typeof k !== 'string') return false;
     if (k === PATH_CRM.dashboard || isAdminUser(user)) return true;
 
+    if (k === PATH_CRM.trash) return userPermissions.some((permission) => permission.actions.some((action) => ['read', 'view'].includes(action)));
     const module = getRouteModule(k);
     return module ? canViewModule(userPermissions, module) : false;
   };

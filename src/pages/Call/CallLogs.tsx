@@ -1,3 +1,4 @@
+import { usePermissions } from '../../hooks/usePermissions';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -175,6 +176,8 @@ const CallLogs = () => {
   const loc = _loc.pathname;
 
   const isRecordingPage = loc.includes('recordings');
+  const { canDelete } = usePermissions();
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -219,7 +222,7 @@ const CallLogs = () => {
       .catch(console.error)
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [isRecordingPage, tableLimit, tablePage, searchParams, listingSearch, listingFilters]);
+  }, [isRecordingPage, tableLimit, tablePage, searchParams, listingSearch, listingFilters, refreshVersion]);
 
   const statsSummary = useMemo(() => {
     const statusStats = stats?.statusStats || [];
@@ -391,7 +394,7 @@ const CallLogs = () => {
         style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
         title={<span style={{ fontWeight: 700 }}>Call Logs</span>}
       >
-        <ListingTable listingTitle={isRecordingPage ? 'Recordings' : 'Call Logs'} fields={LISTING_FIELDS.calls} filterKeys={['status']} serverSide searchPlaceholder="Search exact Call SID" onFiltersChange={(search, filters) => { setListingSearch(search); setListingFilters(filters); setTablePage(1); }} loadExportRows={async () => {
+        <ListingTable trashConfig={{ canDelete: canDelete(isRecordingPage ? 'recordings' : 'calls'), modelType: 'call', onComplete: () => setRefreshVersion((value) => value + 1) }} listingTitle={isRecordingPage ? 'Recordings' : 'Call Logs'} fields={LISTING_FIELDS.calls} filterKeys={['status']} serverSide searchPlaceholder="Search exact Call SID" onFiltersChange={(search, filters) => { setListingSearch(search); setListingFilters(filters); setTablePage(1); }} loadExportRows={async () => {
           const rows: Call[] = [];
           let page = 1;
           while (true) {

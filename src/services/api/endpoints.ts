@@ -4,6 +4,17 @@
  */
 
 export const API_ENDPOINTS = {
+  TRASH: {
+    MODELS: '/trash/models',
+    LIST: '/trash',
+    GET: (id: string) => `/trash/${encodeURIComponent(id)}`,
+    MOVE: '/trash/move',
+    RESTORE: (id: string) => `/trash/restore/${encodeURIComponent(id)}`,
+    RESTORE_BULK: '/trash/restore-bulk',
+    PERMANENT: (id: string) => `/trash/permanent/${encodeURIComponent(id)}`,
+    PERMANENT_BULK: '/trash/permanent-bulk',
+    EMPTY: '/trash/empty',
+  },
   // ==================== AUTHENTICATION ====================
   AUTH: {
     LOGIN: '/auth/login',

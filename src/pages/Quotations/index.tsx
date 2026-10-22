@@ -109,7 +109,7 @@ const QuotationsPage = () => {
   const total = subtotal + tax - discount;
 
   const { getProducts } = useProducts();
-  const { canCreate, canUpdate } = usePermissions();
+  const { canCreate, canUpdate, canDelete } = usePermissions();
 
   const fetchQuotations = async () => {
     try {
@@ -450,7 +450,7 @@ const QuotationsPage = () => {
       </Flex>
 
       <Card>
-        <ListingTable listingTitle="Quotations" fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
+        <ListingTable trashConfig={{ canDelete: canDelete('quotations'), modelType: 'quotation', onComplete: fetchQuotations }} listingTitle="Orders" fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
           rowKey="_id"
           columns={columns}
           dataSource={quotations}

@@ -1,3 +1,5 @@
+import MoveToTrashButton from '../shared/trash/MoveToTrashButton';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { Card } from 'src/components';
 import { Col, Row, Typography, Spin, Table, Tag, Flex, Button } from 'antd';
@@ -23,6 +25,7 @@ const fmtDuration = (seconds: number) =>
     .padStart(2, '0')}`;
 
 const TelecallerDashboard = () => {
+  const { canDelete } = usePermissions();
   const navigate = useNavigate();
   const { getDashboardStats } = dashboaradService();
   const { getTasksList } = taskService();
@@ -32,24 +35,24 @@ const TelecallerDashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<any[]>([]);
 
+  const fetchAll = async () => {
+    setLoading(true);
+    const [statsRes, tasksRes] = await Promise.allSettled([
+      getDashboardStats(),
+      getTasksList({ assignee: user?._id, status: 'pending' }),
+    ]);
+
+    if (statsRes.status === 'fulfilled')
+      setStats((statsRes.value as any)?.data);
+    if (tasksRes.status === 'fulfilled') {
+      const data = (tasksRes.value as any)?.data;
+      setMyTasks(Array.isArray(data) ? data.slice(0, 5) : []);
+    }
+
+    setLoading(false);
+  };
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      const [statsRes, tasksRes] = await Promise.allSettled([
-        getDashboardStats(),
-        getTasksList({ assignee: user?._id, status: 'pending' }),
-      ]);
-
-      if (statsRes.status === 'fulfilled')
-        setStats((statsRes.value as any)?.data);
-      if (tasksRes.status === 'fulfilled') {
-        const data = (tasksRes.value as any)?.data;
-        setMyTasks(Array.isArray(data) ? data.slice(0, 5) : []);
-      }
-
-      setLoading(false);
-    };
-    fetchAll();
+    void fetchAll();
   }, []);
 
   const kpiCards = [
@@ -281,7 +284,24 @@ const TelecallerDashboard = () => {
             >
               <Table
                 rowKey="_id"
-                columns={taskColumns}
+                columns={[
+                  ...taskColumns,
+                  ...(canDelete('tasks')
+                    ? [
+                        {
+                          title: 'Trash',
+                          key: '__trash',
+                          render: (_: unknown, row: { _id?: string }) => (
+                            <MoveToTrashButton
+                              recordId={row._id}
+                              modelType="task"
+                              onMoved={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 dataSource={myTasks}
                 pagination={false}
                 size="small"
@@ -305,7 +325,24 @@ const TelecallerDashboard = () => {
             >
               <Table
                 rowKey="_id"
-                columns={recentCallColumns}
+                columns={[
+                  ...recentCallColumns,
+                  ...(canDelete('calls')
+                    ? [
+                        {
+                          title: 'Trash',
+                          key: '__trash',
+                          render: (_: unknown, row: { _id?: string }) => (
+                            <MoveToTrashButton
+                              recordId={row._id}
+                              modelType="call"
+                              onMoved={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 dataSource={stats?.calls?.recentCalls?.slice(0, 5) || []}
                 pagination={false}
                 size="small"

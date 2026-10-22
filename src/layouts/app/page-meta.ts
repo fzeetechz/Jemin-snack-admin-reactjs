@@ -19,6 +19,7 @@ import {
   Wallet,
   ListTodo,
   ContactRound,
+  Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PATH_CRM } from '../../config/permissions';
@@ -31,6 +32,7 @@ interface PageMeta {
 }
 
 const pages: Record<string, PageMeta> = {
+  [PATH_CRM.trash]: { title: 'Trash', section: 'Administration', description: 'Restore deleted records or remove them permanently.', icon: Trash2 },
   [PATH_CRM.dashboard]: {
     title: 'Overview',
     section: 'Workspace',

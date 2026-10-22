@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
@@ -43,9 +44,7 @@ const roleService = () => {
 
   const deleteRoles = async (id: string) => {
     try {
-      const response = await apiRequest.delete(
-        `${API_ENDPOINTS.ROLES.DELETE(id)}`
-      );
+      const response = await trashService.move(id, 'role');
       console.log(response);
       return response;
     } catch (error) {

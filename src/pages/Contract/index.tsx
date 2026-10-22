@@ -170,7 +170,7 @@ const ContractPage = () => {
       title: 'Actions',
       key: 'actions',
       width: 160,
-      render: (_, row) => <Space><Button size="small" icon={<EditOutlined />} onClick={() => editContract(row)}>Edit</Button><Popconfirm title="Delete contract?" onConfirm={() => setContracts((items) => items.filter((item) => item.id !== row.id))} okButtonProps={{ danger: true }}><Button size="small" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm></Space>,
+      render: (_, row) => <Space><Button size="small" icon={<EditOutlined />} onClick={() => editContract(row)}>Edit</Button><Popconfirm title="Move contract to Trash?" description="You can restore it from the Trash page on this device." onConfirm={() => setContracts((items) => items.map((item) => item.id === row.id ? { ...item, is_trash: true, deletedAt: new Date().toISOString() } : item))} okButtonProps={{ danger: true }}><Button size="small" danger icon={<DeleteOutlined />}>Move to Trash</Button></Popconfirm></Space>,
     },
   ];
 
@@ -251,7 +251,7 @@ const ContractPage = () => {
         <ListingTable listingTitle="Contracts" importConfig={{ fields: [{ key: 'customer_id', label: 'Customer ID', required: true, options: MOCK_CUSTOMERS.map((customer) => customer.value) }, { key: 'subject', label: 'Subject', required: true }, { key: 'contract_value', label: 'Value', type: 'number' }, { key: 'contract_type', label: 'Type', options: contractTypes }, { key: 'start_date', label: 'Start date', required: true, type: 'date' }, { key: 'end_date', label: 'End date', type: 'date' }, { key: 'description', label: 'Description' }, { key: 'hide_from_customer', label: 'Hidden', type: 'boolean' }, { key: 'is_trash', label: 'Trash', type: 'boolean' }], validate: (row) => row.end_date && String(row.end_date) < String(row.start_date) ? ['End date must be on or after start date'] : [], create: async (row) => { const contract = { ...row, id: 'CT-' + crypto.randomUUID(), customer_name: MOCK_CUSTOMERS.find((customer) => customer.value === row.customer_id)?.label ?? '', created_at: dayjs().format('YYYY-MM-DD') } as Contract; setContracts((items) => [contract, ...items]); return { success: true }; }, onComplete: () => {} }} fields={LISTING_FIELDS.contracts} filterKeys={["contract_type","hide_from_customer","is_trash"]}
           rowKey="id"
           columns={columns}
-          dataSource={contracts}
+          dataSource={contracts.filter((item) => !item.is_trash)}
           pagination={{ pageSize: 8 }}
           scroll={{ x: 900 }}
           rowHoverable={false}

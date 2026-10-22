@@ -1,3 +1,4 @@
+import { trashService } from './trashService';
 import apiClient from './api/apiClient';
 
 const configService = () => {
@@ -30,14 +31,7 @@ const configService = () => {
     }
   };
 
-  const deleteConfig = async (id: string) => {
-    try {
-      const res = await apiClient.post(`/config/delete/${id}`);
-      return res.data;
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const deleteConfig = (id: string) => trashService.move(id, 'config');
   return { getConfig, createConfig, updateConfig, deleteConfig };
 };
 
