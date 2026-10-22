@@ -2,7 +2,7 @@ import { Eye as EyeOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
-import { CalendarOutlined, WalletOutlined } from '@ant-design/icons';
+import { CalendarOutlined, TeamOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
@@ -207,8 +207,8 @@ const SalarySlip = () => {
   ];
 
   return (
-    <Flex vertical gap={24} className="module-page">
-      <Card bordered={false} style={{ borderRadius: 24 }}>
+    <Flex vertical gap={18} className="module-page salary-slip-page">
+      <Card bordered={false} className="salary-slip-header-card">
         <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
           <div>
             <Title level={4} style={{ margin: 0 }}>
@@ -251,17 +251,17 @@ const SalarySlip = () => {
       </Card>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={6}>
-          <Card bordered={false} style={{ borderRadius: 20 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="salary-slip-stat-card">
             <Statistic
               title="Employees"
               value={data?.totalEmployees ?? 0}
-              prefix={<WalletOutlined />}
+              prefix={<TeamOutlined />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card bordered={false} style={{ borderRadius: 20 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="salary-slip-stat-card">
             <Statistic
               title="Gross Payout"
               value={totals.gross}
@@ -269,8 +269,8 @@ const SalarySlip = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card bordered={false} style={{ borderRadius: 20 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="salary-slip-stat-card">
             <Statistic
               title="Total Deductions"
               value={totals.deductions}
@@ -278,8 +278,8 @@ const SalarySlip = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card bordered={false} style={{ borderRadius: 20 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="salary-slip-stat-card">
             <Statistic
               title="Net Payout"
               value={totals.net}
@@ -291,7 +291,7 @@ const SalarySlip = () => {
 
       <Card
         bordered={false}
-        style={{ borderRadius: 24 }}
+        className="salary-slip-table-card"
         title={
           <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
             <Text strong style={{ fontSize: 16 }}>
@@ -306,13 +306,23 @@ const SalarySlip = () => {
         {data && data.payslips.length === 0 ? (
           <Empty description="No active salary records found for this month." />
         ) : (
-          <ListingTable trashConfig={{ canDelete: canDelete('payroll'), modelType: 'payslip', getId: (row) => row.payslipId ?? row._id ?? row.id, onComplete: () => fetchPayslips(selectedMonth) }} listingTitle="Payslips" fields={LISTING_FIELDS.payslips} filterKeys={["period.month","period.year"]}
+          <ListingTable
+            trashConfig={{
+              canDelete: canDelete('payroll'),
+              modelType: 'payslip',
+              getId: (row) => row.payslipId ?? row._id ?? row.id,
+              onComplete: () => fetchPayslips(selectedMonth),
+            }}
+            listingTitle="Payslips"
+            fields={LISTING_FIELDS.payslips}
+            filterKeys={['period.month', 'period.year']}
+            showRecordId={false}
             rowKey={(record) => record.employee._id}
             columns={columns}
             dataSource={data?.payslips ?? []}
             loading={loading}
             pagination={{ pageSize: 10 }}
-            scroll={{ x: 1100 }}
+            scroll={{ x: 'max-content' }}
             rowHoverable={false}
           />
         )}
@@ -321,7 +331,8 @@ const SalarySlip = () => {
       <Drawer
         title={selectedPayslip?.employee.name || 'Salary Slip'}
         placement="right"
-        width={560}
+        width="min(560px, 100vw)"
+        className="salary-slip-drawer"
         onClose={() => setSelectedPayslip(null)}
         open={Boolean(selectedPayslip)}
       >

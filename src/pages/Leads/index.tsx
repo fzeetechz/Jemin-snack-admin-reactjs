@@ -466,6 +466,7 @@ const LeadsPage = () => {
               importConfig={
                 canCreate('leads') && listingImport('leads', fetchLeads)
               }
+              showUpload
               rowKey="_id"
               columns={columns}
               dataSource={leads}

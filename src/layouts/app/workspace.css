@@ -326,14 +326,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 17px;
+  margin-bottom: 8px;
 }
 .listing-heading-title {
   display: flex;
   align-items: center;
   gap: 10px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 .listing-heading-icon {
@@ -342,7 +342,7 @@
   color: var(--muted);
 }
 .listing-count {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   background: var(--surface-hover);
   color: var(--muted);
@@ -351,15 +351,15 @@
   white-space: nowrap;
 }
 .listing-toolbar {
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
   background: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 9px;
 }
 .listing-toolbar-filters {
-  flex: 1 1 100%;
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
 }
 .listing-toolbar-actions {
@@ -503,11 +503,14 @@
     gap: 12px;
   }
   .listing-toolbar {
-    padding: 12px;
+    padding: 9px;
   }
   .listing-toolbar-filters,
   .listing-toolbar-actions {
     width: 100%;
+  }
+  .listing-toolbar-filters {
+    flex-basis: 100%;
   }
   .listing-toolbar-filters > .ant-space-item:first-child,
   .listing-toolbar-filters > .ant-space-item:first-child .listing-search {

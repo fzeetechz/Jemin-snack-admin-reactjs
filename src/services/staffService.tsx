@@ -42,6 +42,24 @@ const staffService = () => {
     }
   };
 
+  const changeStaffPassword = async (id: string, password: string) => {
+    try {
+      return await apiRequest.put(API_ENDPOINTS.STAFF.UPDATE(id), { password });
+    } catch (error) {
+      console.error('Error changing staff password:', error);
+      throw error;
+    }
+  };
+
+  const showStaffPassword = async (id: string) => {
+    try {
+      return await apiRequest.get(API_ENDPOINTS.STAFF.SHOW_PASSWORD(id));
+    } catch (error) {
+      console.error('Error retrieving staff password:', error);
+      throw error;
+    }
+  };
+
   const deleteStaff = async (id: any) => {
     try {
       const response = await trashService.move(id, 'staff');
@@ -52,7 +70,14 @@ const staffService = () => {
     }
   };
 
-  return { getStaff, createStaff, updateStaff, deleteStaff };
+  return {
+    getStaff,
+    createStaff,
+    updateStaff,
+    changeStaffPassword,
+    showStaffPassword,
+    deleteStaff,
+  };
 };
 
 export default staffService;

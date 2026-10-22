@@ -1,4 +1,4 @@
-import { Plus as PlusOutlined, PencilLine as EditOutlined } from 'lucide-react';
+import { Plus as PlusOutlined, Eye, KeyRound, Pencil } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -16,6 +16,8 @@ import {
   message,
   Modal,
   theme,
+  Tooltip,
+  Typography,
 } from 'antd';
 import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import staffService from '../../../services/staffService';
@@ -82,7 +84,7 @@ const StaffAvatar = ({ staff, onPreview }: StaffAvatarProps) => {
 
   const avatar = (
     <Avatar
-      size={64}
+      size={34}
       src={hasPhoto ? avatarUrl : undefined}
       alt={fullName || 'Staff'}
       onError={() => {
@@ -93,7 +95,7 @@ const StaffAvatar = ({ staff, onPreview }: StaffAvatarProps) => {
         backgroundColor,
         color,
         fontWeight: 600,
-        fontSize: 22,
+        fontSize: 14,
         border: `2px solid ${token.colorBgContainer}`,
         boxShadow: token.boxShadowTertiary,
       }}
@@ -108,7 +110,7 @@ const StaffAvatar = ({ staff, onPreview }: StaffAvatarProps) => {
       shape="circle"
       aria-label={`View ${fullName || 'staff'} photo`}
       onClick={onPreview}
-      style={{ width: 70, height: 70, padding: 3 }}
+      style={{ width: 40, height: 40, padding: 3 }}
     >
       {avatar}
     </Button>
@@ -121,9 +123,12 @@ const StaffPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
+  const [passwordStaff, setPasswordStaff] = useState<User | null>(null);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   //  Services
-  const { createStaff, updateStaff } = staffService();
+  const { createStaff, updateStaff, changeStaffPassword, showStaffPassword } =
+    staffService();
   const { getRoles } = roleService();
 
   // ✅ Dynamic roles (replace with API)
@@ -132,6 +137,7 @@ const StaffPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
 
   // Image Modal
 
@@ -318,48 +324,98 @@ const StaffPage = () => {
     });
   };
 
+  const handleChangePassword = async () => {
+    if (!passwordStaff) return;
+    try {
+      const values = await passwordForm.validateFields();
+      const response = (await changeStaffPassword(
+        passwordStaff._id,
+        values.password
+      )) as any;
+      if (response?.success === false) {
+        message.error(response.message || 'Unable to change staff password');
+        return;
+      }
+      message.success(
+        response?.message ||
+          response?.meassge ||
+          'Staff password updated successfully'
+      );
+      setPasswordStaff(null);
+      passwordForm.resetFields();
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      message.error(error?.message || 'Unable to change staff password');
+    }
+  };
+
+  const handleShowPassword = async (record: User) => {
+    setIsPasswordLoading(true);
+    try {
+      const response = (await showStaffPassword(record._id)) as any;
+      const password =
+        response?.password ??
+        response?.data?.password ??
+        response?.data?.data?.password;
+      if (typeof password !== 'string' || !password) {
+        message.error(
+          response?.message || 'Password was not returned by the server'
+        );
+        return;
+      }
+      Modal.info({
+        title: `Password for ${record.firstName} ${record.lastName}`,
+        content: <Input.Password value={password} readOnly visibilityToggle />,
+        okText: 'Close',
+      });
+    } catch (error: any) {
+      message.error(error?.message || 'Unable to retrieve staff password');
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
   const columns = [
     {
-      title: 'Image',
-      dataIndex: 'avatar',
-      key: 'avatar',
-      render: (_: unknown, record: User) => (
-        <StaffAvatar
-          staff={record}
-          onPreview={() => {
-            setSelectedStaff(record);
-            showModal();
-          }}
-        />
-      ),
-    },
-    {
-      title: 'StaffId',
-      dataIndex: 'Id',
-      key: 'Id',
-      render: (_: any) => (
-        <p
-          className="bold"
-          style={{
-            fontWeight: '600',
-          }}
-        >
-          {_ ? _ : 'NA'}
-        </p>
-      ),
-    },
-    {
-      title: 'Name',
+      title: 'Staff member',
       key: 'name',
-      render: (_: any, record: User) =>
-        `${record.firstName} ${record.lastName}`,
+      width: 250,
+      render: (_: unknown, record: User) => {
+        const fullName = `${record.firstName} ${record.lastName}`.trim();
+        return (
+          <Space size={11}>
+            <StaffAvatar
+              staff={record}
+              onPreview={() => {
+                setSelectedStaff(record);
+                showModal();
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                {fullName || 'Unnamed staff'}
+              </div>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {record.email || 'No email'}
+              </Typography.Text>
+            </div>
+          </Space>
+        );
+      },
     },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Phone', dataIndex: 'phone', key: 'phone' },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 150,
+      render: (phone: string) =>
+        phone || <Typography.Text type="secondary">—</Typography.Text>,
+    },
     {
       title: 'Role',
       dataIndex: 'roleId',
       key: 'roleId',
+      width: 150,
       render: (roleId: any) => {
         return (
           <>
@@ -376,6 +432,7 @@ const StaffPage = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      width: 110,
       render: (status: UserStatus) => (
         <Tag color={status === 'active' ? 'green' : 'red'}>{status}</Tag>
       ),
@@ -384,35 +441,75 @@ const StaffPage = () => {
       title: 'Created',
       dataIndex: 'created_at',
       key: 'created_at',
+      width: 125,
       render: (_: string, record: User) => formatCreatedDate(record),
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 144,
       render: (_: any, record: User) => (
-        <Space>
+        <Space size={4}>
           {canUpdate('users') && (
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => openEditModal(record)}
-            />
+            <>
+              <Tooltip title="Edit staff">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<Pencil size={16} />}
+                  onClick={() => openEditModal(record)}
+                  aria-label={`Edit ${record.firstName} ${record.lastName}`}
+                />
+              </Tooltip>
+              <Tooltip title="Show password">
+                <Button
+                  size="small"
+                  type="text"
+                  loading={isPasswordLoading}
+                  icon={<Eye size={17} />}
+                  onClick={() => handleShowPassword(record)}
+                  aria-label={`Show password for ${record.firstName} ${record.lastName}`}
+                />
+              </Tooltip>
+              <Tooltip title="Change password">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<KeyRound size={16} />}
+                  onClick={() => {
+                    passwordForm.resetFields();
+                    setPasswordStaff(record);
+                  }}
+                  aria-label={`Change password for ${record.firstName} ${record.lastName}`}
+                />
+              </Tooltip>
+            </>
           )}
           {canDelete('users') && (
-            <Button
-              size="small"
-              danger={record.status === 'active'}
-              type={record.status === 'active' ? 'default' : 'primary'}
-              icon={
-                record.status === 'active' ? (
-                  <StopOutlined />
-                ) : (
-                  <CheckOutlined />
-                )
+            <Tooltip
+              title={
+                record.status === 'active' ? 'Block staff' : 'Activate staff'
               }
-              onClick={() => handleToggleStatus(record)}
-              title={record.status === 'active' ? 'Block' : 'Activate'}
-            />
+            >
+              <Button
+                size="small"
+                type="text"
+                danger={record.status === 'active'}
+                icon={
+                  record.status === 'active' ? (
+                    <StopOutlined />
+                  ) : (
+                    <CheckOutlined />
+                  )
+                }
+                onClick={() => handleToggleStatus(record)}
+                aria-label={
+                  record.status === 'active'
+                    ? `Block ${record.firstName}`
+                    : `Activate ${record.firstName}`
+                }
+              />
+            </Tooltip>
           )}
         </Space>
       ),
@@ -430,6 +527,7 @@ const StaffPage = () => {
         />
       )}
       <Card
+        className="staff-management-card"
         title="Staff Management"
         extra={
           canCreate('users') && (
@@ -444,7 +542,11 @@ const StaffPage = () => {
         }
       >
         <ListingTable
-          trashConfig={{ canDelete: canDelete('users'), modelType: 'staff', onComplete: getStaffs }}
+          trashConfig={{
+            canDelete: canDelete('users'),
+            modelType: 'staff',
+            onComplete: getStaffs,
+          }}
           listingTitle="Staff"
           onRefresh={getStaffs}
           fields={LISTING_FIELDS.staff}
@@ -454,6 +556,8 @@ const StaffPage = () => {
           dataSource={users}
           pagination={{ pageSize: 10 }}
           rowHoverable={false}
+          size="middle"
+          className="staff-management-table"
         />
       </Card>
 
@@ -588,6 +692,59 @@ const StaffPage = () => {
           </Form.Item>
         </Form>
       </Drawer>
+      <Modal
+        title={`Change password for ${passwordStaff?.firstName ?? ''} ${
+          passwordStaff?.lastName ?? ''
+        }`}
+        open={Boolean(passwordStaff)}
+        onCancel={() => {
+          setPasswordStaff(null);
+          passwordForm.resetFields();
+        }}
+        onOk={handleChangePassword}
+        okText="Update password"
+        destroyOnHidden
+      >
+        <Form form={passwordForm} layout="vertical">
+          <Form.Item
+            name="password"
+            label="New password"
+            rules={[
+              { required: true, message: 'Password is required' },
+              { min: 8, message: 'Password must be at least 8 characters' },
+              {
+                pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]+$/,
+                message:
+                  'Password must contain at least one letter and one number',
+              },
+            ]}
+          >
+            <Input.Password
+              autoComplete="new-password"
+              placeholder="Enter new password"
+            />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="Confirm new password"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: 'Please confirm the password' },
+              ({ getFieldValue }) => ({
+                validator: (_, value) =>
+                  !value || getFieldValue('password') === value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error('Passwords do not match')),
+              }),
+            ]}
+          >
+            <Input.Password
+              autoComplete="new-password"
+              placeholder="Confirm new password"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -18,9 +18,9 @@ export function withTrashActions<T extends object>(
     return {
       ...column,
       fixed: 'right' as const,
-      width: Math.max(Number(column.width) || 160, 160) + 100,
+      width: column.width ? Number(column.width) + 48 : 260,
       render: (value: unknown, row: T, index: number) => (
-        <Space wrap>
+        <Space size={4}>
           {column.render?.(value, row, index) as ReactNode}
           {renderDelete(row)}
         </Space>
@@ -36,7 +36,9 @@ export function withTrashActions<T extends object>(
       render: (_: unknown, row: T) => renderDelete(row),
     });
   // Ant Design needs the fixed right action after any scrollable details column.
-  const actionIndex = result.findIndex((column) => column.key === 'actions' || column.title === 'Actions');
+  const actionIndex = result.findIndex(
+    (column) => column.key === 'actions' || column.title === 'Actions'
+  );
   if (actionIndex >= 0 && actionIndex !== result.length - 1) {
     const [action] = result.splice(actionIndex, 1);
     result.push(action);

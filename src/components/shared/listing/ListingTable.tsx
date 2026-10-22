@@ -55,10 +55,12 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
       }
     | false;
   listingTitle: string;
+  showRecordId?: boolean;
   searchPlaceholder?: string;
   fields: ListingField[];
   filterKeys?: string[];
   importConfig?: ListingImport | false;
+  showUpload?: boolean;
   onRefresh?: () => Promise<unknown> | void;
   serverSide?: boolean;
   onFiltersChange?: (search: string, filters: Record<string, string>) => void;
@@ -68,10 +70,12 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
 export default function ListingTable<T extends object>({
   trashConfig,
   listingTitle,
+  showRecordId = true,
   searchPlaceholder,
   fields,
   filterKeys = [],
   importConfig,
+  showUpload = false,
   onRefresh,
   serverSide = false,
   onFiltersChange,
@@ -126,6 +130,34 @@ export default function ListingTable<T extends object>({
     onFiltersChange?.(query, next);
   };
   const baseColumns: NonNullable<TableProps<T>['columns']> = [
+    ...(showRecordId
+      ? [
+          {
+            title: 'ID',
+            key: '__record_id',
+            width: 190,
+            render: (_, row) => {
+              const record = row as unknown as Record<string, unknown>;
+              const id = record.Id ?? record.id ?? record._id;
+              return id == null || id === '' ? (
+                <Typography.Text type="secondary">-</Typography.Text>
+              ) : (
+                <Typography.Text
+                  copyable={{ text: String(id) }}
+                  ellipsis={{ tooltip: String(id) }}
+                  style={{
+                    maxWidth: 160,
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  }}
+                >
+                  {String(id)}
+                </Typography.Text>
+              );
+            },
+          },
+        ]
+      : []),
     ...columns.map((column) => {
       if ('children' in column) return column;
       const field =
@@ -151,7 +183,7 @@ export default function ListingTable<T extends object>({
             }
           : {}),
         ...(column.title === 'Actions' || column.key === 'actions'
-          ? { width: Math.max(Number(column.width) || 160, 160) }
+          ? { width: column.width ?? 160 }
           : {}),
       };
     }),
@@ -188,9 +220,10 @@ export default function ListingTable<T extends object>({
               if (id) setTrashedIds((previous) => new Set([...previous, id]));
               await trashConfig.onComplete();
             }}
-          >
-            Delete
-          </MoveToTrashButton>
+            children=""
+            aria-label="Move to trash"
+            title="Move to trash"
+          />
         );
       })
     : baseColumns;
@@ -501,7 +534,7 @@ export default function ListingTable<T extends object>({
                 : 'filtered records'}
             </Button>
           </Dropdown>
-          {importConfig && (
+          {showUpload && importConfig && (
             <Button
               icon={<UploadIcon size={15} strokeWidth={1.8} />}
               onClick={() => {
@@ -575,7 +608,7 @@ export default function ListingTable<T extends object>({
           />
         )}
       </Modal>
-      {importConfig && (
+      {showUpload && importConfig && (
         <Modal
           title={`Bulk upload ${listingTitle.toLowerCase()}`}
           open={importOpen}

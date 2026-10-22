@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     CREATE: '/staff',
     UPDATE: (id: string) => `/staff/${id}`,
     DELETE: (id: string) => `/staff/${id}`,
+    SHOW_PASSWORD: (id: string) => `/staff/${id}/show-password`,
   },
   //=========================Staff===========================
 
