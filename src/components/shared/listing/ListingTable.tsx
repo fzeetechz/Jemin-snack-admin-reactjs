@@ -136,7 +136,7 @@ export default function ListingTable<T extends object>({
             title: 'ID',
             key: '__record_id',
             width: 190,
-            render: (_, row) => {
+            render: (_: unknown, row: T) => {
               const record = row as unknown as Record<string, unknown>;
               const id = record.Id ?? record.id ?? record._id;
               return id == null || id === '' ? (
