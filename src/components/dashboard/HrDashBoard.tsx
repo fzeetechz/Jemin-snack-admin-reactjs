@@ -242,6 +242,7 @@ const HrDashBoard = () => {
           {kpiCards.map((card) => (
             <Col xs={24} sm={12} md={8} lg={4} key={card.label}>
               <Card
+                className="dashboard-kpi-card"
                 hoverable
                 style={{
                   cursor: 'pointer',

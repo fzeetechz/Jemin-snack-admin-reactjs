@@ -108,6 +108,7 @@ const ConfigManager = () => {
           onComplete: fetchConfigs,
         }}
         listingTitle="Configuration"
+        showRecordId={false}
         fields={[
           { key: 'key', label: 'Key' },
           { key: 'description', label: 'Description' },

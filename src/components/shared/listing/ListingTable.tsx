@@ -1,8 +1,10 @@
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Alert,
   Button,
+  Card,
   Descriptions,
   Dropdown,
   Flex,
@@ -12,6 +14,7 @@ import {
   Select,
   Space,
   Table,
+  Tag,
   Typography,
   Upload,
   message,
@@ -37,6 +40,50 @@ import {
 import type { TableProps } from 'antd';
 import type { ImportRow, ListingField, ValidatedRow } from './listing-utils';
 
+const detailLabel = (key: string) =>
+  key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_.-]+/g, ' ')
+    .replace(/^./, (character) => character.toUpperCase());
+
+const isInternalDetailKey = (key: string) => {
+  const leafKey = key.split('.').pop()?.toLowerCase() ?? key.toLowerCase();
+  return ['id', '_id', '__v', 'responsekeys'].includes(leafKey) || leafKey.endsWith('id');
+};
+
+const hasDetailValue = (value: unknown): boolean =>
+  value !== undefined && value !== null && value !== '';
+
+const renderReadableDetail = (value: unknown): ReactNode => {
+  if (!hasDetailValue(value)) return '�';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) {
+    if (!value.length) return '�';
+    if (value.every((item) => item === null || typeof item !== 'object')) {
+      return <Space wrap>{value.map((item, index) => <Tag key={index}>{String(item)}</Tag>)}</Space>;
+    }
+    return (
+      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+        {value.map((item, index) => (
+          <Card key={index} size="small" bordered>
+            {renderReadableDetail(item)}
+          </Card>
+        ))}
+      </Space>
+    );
+  }
+  if (typeof value === 'object') {
+    const items = Object.entries(value as Record<string, unknown>)
+      .filter(([key, item]) => !isInternalDetailKey(key) && hasDetailValue(item))
+      .map(([key, item]) => ({
+        key,
+        label: detailLabel(key),
+        children: renderReadableDetail(item),
+      }));
+    return items.length ? <Descriptions size="small" column={1} items={items} /> : '�';
+  }
+  return String(value);
+};
 export interface ListingImport {
   fields: ListingField[];
   create: (row: ImportRow) => Promise<unknown>;
@@ -65,6 +112,8 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
   serverSide?: boolean;
   onFiltersChange?: (search: string, filters: Record<string, string>) => void;
   loadExportRows?: () => Promise<T[]>;
+  detailFields?: (record: T) => ListingField[];
+  renderDetailValue?: (record: T, field: ListingField) => ReactNode;
 }
 
 export default function ListingTable<T extends object>({
@@ -80,6 +129,8 @@ export default function ListingTable<T extends object>({
   serverSide = false,
   onFiltersChange,
   loadExportRows,
+  detailFields,
+  renderDetailValue,
   dataSource = [],
   columns = [],
   pagination,
@@ -130,6 +181,17 @@ export default function ListingTable<T extends object>({
     onFiltersChange?.(query, next);
   };
   const baseColumns: NonNullable<TableProps<T>['columns']> = [
+    {
+      title: '#',
+      key: '__index',
+      width: 52,
+      fixed: 'left' as const,
+      render: (_: unknown, __: T, index: number) => (
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {(page - 1) * pageSize + index + 1}
+        </Typography.Text>
+      ),
+    },
     ...(showRecordId
       ? [
           {
@@ -183,7 +245,7 @@ export default function ListingTable<T extends object>({
             }
           : {}),
         ...(column.title === 'Actions' || column.key === 'actions'
-          ? { width: column.width ?? 160 }
+          ? { width: column.width ?? 144 }
           : {}),
       };
     }),
@@ -590,20 +652,19 @@ export default function ListingTable<T extends object>({
             bordered
             column={1}
             items={[
-              {
-                key: '__id',
-                label: 'Item ID',
-                children: (
-                  <Typography.Text copyable>
-                    {getItemId(viewing)}
-                  </Typography.Text>
-                ),
-              },
-              ...fields.map((field) => ({
-                key: field.key,
-                label: field.label,
-                children: displayValue(getValue(viewing, field.key)) || '—',
-              })),
+              ...(detailFields?.(viewing) ?? fields)
+                .filter(
+                  (field) =>
+                    !isInternalDetailKey(field.key) &&
+                    hasDetailValue(getValue(viewing, field.key))
+                )
+                .map((field) => ({
+                  key: field.key,
+                  label: field.label,
+                  children:
+                    renderDetailValue?.(viewing, field) ??
+                    renderReadableDetail(getValue(viewing, field.key)),
+                })),
             ]}
           />
         )}

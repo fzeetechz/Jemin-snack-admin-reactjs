@@ -790,6 +790,7 @@ const Attendance = () => {
                 getId: (row) => row.id,
               }}
               listingTitle="Attendance"
+              showRecordId={false}
               fields={LISTING_FIELDS.attendance}
               filterKeys={['status', 'department', 'designation']}
               rowKey="id"

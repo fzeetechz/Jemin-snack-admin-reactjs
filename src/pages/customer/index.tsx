@@ -370,6 +370,7 @@ const CustomersPage = () => {
               onComplete: fetchCustomers,
             }}
             listingTitle="Customers"
+            showRecordId={false}
             fields={LISTING_FIELDS.customers}
             filterKeys={['type', 'isActive', 'address.city']}
             importConfig={

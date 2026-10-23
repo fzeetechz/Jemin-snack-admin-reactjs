@@ -20,7 +20,7 @@ export default function MoveToTrashButton({
   disabledReason,
   onMoved,
   disabled,
-  children = 'Move to Trash',
+  children,
   ...props
 }: MoveToTrashButtonProps) {
   const [moving, setMoving] = useState(false);
@@ -39,6 +39,8 @@ export default function MoveToTrashButton({
           size="small"
           danger
           icon={<Trash2 size={15} />}
+          aria-label="Move to Trash"
+          title="Move to Trash"
           {...props}
           loading={moving}
           disabled={disabled || !!disabledReason || !recordId || moving}

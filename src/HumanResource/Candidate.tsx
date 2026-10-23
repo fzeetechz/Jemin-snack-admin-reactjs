@@ -123,6 +123,7 @@ const Candidate = () => {
           onComplete: fetchData,
         }}
         listingTitle="Candidates"
+        showRecordId={false}
         rowKey="_id"
         onRefresh={fetchData}
         fields={LISTING_FIELDS.candidates}

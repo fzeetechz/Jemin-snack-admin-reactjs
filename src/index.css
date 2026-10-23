@@ -166,6 +166,74 @@ h6 {
   font-size: 12px;
   border-radius: 7px;
 }
+
+/* Shared table system: compact rows, clear hierarchy, aligned controls. */
+.ant-table-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 5px 18px rgb(24 39 62 / 5%);
+}
+.ant-table-wrapper .ant-table {
+  color: var(--text);
+  background: transparent;
+}
+.ant-table-wrapper .ant-table-thead > tr > th,
+.ant-table-wrapper .ant-table-thead > tr > td {
+  height: 46px;
+  padding: 10px 14px;
+  color: color-mix(in srgb, var(--text) 68%, var(--accent));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface-muted)), var(--surface-muted));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  box-shadow: inset 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  line-height: 1.25;
+  vertical-align: middle;
+}
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  padding: 8px 14px;
+  line-height: 1.4;
+  border-bottom-color: color-mix(in srgb, var(--border) 82%, transparent);
+  vertical-align: middle;
+}
+.ant-table-wrapper .ant-table-tbody > tr:nth-child(even) > td {
+  background: color-mix(in srgb, var(--surface-muted) 42%, transparent);
+}
+.ant-table-wrapper .ant-table-tbody > tr:last-child > td { border-bottom: 0; }
+.ant-table-wrapper .ant-table-tbody > tr > td { transition: background-color 140ms ease; }
+.ant-table-wrapper .ant-table-tbody > tr:hover > td { background: color-mix(in srgb, var(--accent) 7%, var(--surface)) !important; }
+.ant-table-wrapper .ant-table-cell .ant-space { gap: 5px; }
+.ant-table-wrapper .ant-table-cell:has(.ant-btn) { white-space: nowrap; }
+.ant-table-wrapper .ant-table-cell[data-index='actions'] {
+  padding-inline: 8px;
+}
+.ant-table-wrapper .ant-table-cell[data-index='actions'] .ant-space {
+  gap: 4px;
+}
+.ant-table-wrapper .ant-table-cell .ant-btn-sm {
+  height: 27px;
+  padding-inline: 9px;
+  line-height: 25px;
+  border-radius: 8px;
+  font-weight: 550;
+}
+.ant-table-wrapper .ant-table-cell .ant-tag {
+  margin-inline-end: 4px;
+  padding-inline: 8px;
+  border-radius: 999px;
+  line-height: 20px;
+  font-size: 11px;
+}
+.ant-table-wrapper .ant-table-pagination {
+  margin: 0 !important;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface), var(--surface-muted));
+}
+.ant-table-wrapper .ant-pagination .ant-pagination-item,
+.ant-table-wrapper .ant-pagination .ant-pagination-prev,
+.ant-table-wrapper .ant-pagination .ant-pagination-next {
+  border-radius: 8px;
+}
 .staff-management-table .ant-table-tbody > tr > td {
   padding-block: 8px;
 }

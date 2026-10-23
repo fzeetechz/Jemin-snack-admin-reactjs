@@ -1,0 +1,93 @@
+.product-catalog-page > .ant-space {
+  gap: 24px !important;
+}
+
+.product-catalog-header {
+  align-items: center !important;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 95% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%),
+    var(--surface);
+  box-shadow: 0 8px 24px rgb(26 38 64 / 4%);
+}
+
+.product-catalog-header h3.ant-typography {
+  margin-bottom: 5px !important;
+  letter-spacing: -0.5px;
+}
+
+.product-catalog-header > .ant-space {
+  justify-content: flex-end;
+}
+
+.product-catalog-header .ant-btn {
+  min-height: 38px;
+  border-radius: 9px;
+}
+
+.product-catalog-page > .ant-space > .ant-space-item > .ant-row:first-of-type {
+  row-gap: 12px;
+}
+
+.product-catalog-page > .ant-space > .ant-space-item > .ant-row:first-of-type .ant-card {
+  height: 100%;
+  min-height: 108px;
+  border-radius: 14px;
+  box-shadow: 0 5px 16px rgb(26 38 64 / 4%);
+}
+
+.product-catalog-page .catalog-products-column {
+  order: 1;
+}
+
+.product-catalog-page .catalog-types-column {
+  order: 2;
+}
+
+.product-catalog-page .catalog-products-card,
+.product-catalog-page .catalog-types-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 7px 22px rgb(26 38 64 / 4%);
+}
+
+.product-catalog-page .catalog-products-card > .ant-card-head,
+.product-catalog-page .catalog-types-card > .ant-card-head {
+  min-height: 58px;
+  border-bottom-color: var(--border);
+}
+
+.product-catalog-page .catalog-products-card > .ant-card-body,
+.product-catalog-page .catalog-types-card > .ant-card-body {
+  padding: 20px;
+}
+
+.product-catalog-page .catalog-types-card .listing-heading {
+  display: none;
+}
+
+.product-catalog-page .catalog-types-card .listing-toolbar {
+  margin-bottom: 12px;
+}
+
+.product-catalog-page .catalog-types-card .listing-workspace {
+  padding: 0;
+}
+
+@media (max-width: 769px) {
+  .product-catalog-header {
+    padding: 18px;
+  }
+
+  .product-catalog-header > .ant-space {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .product-catalog-page .catalog-products-card > .ant-card-body,
+  .product-catalog-page .catalog-types-card > .ant-card-body {
+    padding: 12px;
+  }
+}

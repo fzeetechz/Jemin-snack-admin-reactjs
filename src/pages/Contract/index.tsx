@@ -170,7 +170,7 @@ const ContractPage = () => {
       title: 'Actions',
       key: 'actions',
       width: 160,
-      render: (_, row) => <Space><Button size="small" icon={<EditOutlined />} onClick={() => editContract(row)}>Edit</Button><Popconfirm title="Move contract to Trash?" description="You can restore it from the Trash page on this device." onConfirm={() => setContracts((items) => items.map((item) => item.id === row.id ? { ...item, is_trash: true, deletedAt: new Date().toISOString() } : item))} okButtonProps={{ danger: true }}><Button size="small" danger icon={<DeleteOutlined />}>Move to Trash</Button></Popconfirm></Space>,
+      render: (_, row) => <Space><Button size="small" icon={<EditOutlined />} onClick={() => editContract(row)}>Edit</Button><Popconfirm title="Move contract to Trash?" description="You can restore it from the Trash page on this device." onConfirm={() => setContracts((items) => items.map((item) => item.id === row.id ? { ...item, is_trash: true, deletedAt: new Date().toISOString() } : item))} okButtonProps={{ danger: true }}><Button size="small" danger icon={<DeleteOutlined />} aria-label="Move contract to Trash" title="Move to Trash" /></Popconfirm></Space>,
     },
   ];
 

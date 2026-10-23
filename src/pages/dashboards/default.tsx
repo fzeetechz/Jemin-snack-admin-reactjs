@@ -27,7 +27,7 @@ export const DefaultDashboardPage = () => {
   };
 
   return (
-    <div>
+    <div className="dashboard-page">
       <Helmet>
         <title>CRM Dashboard | Jemini</title>
       </Helmet>
@@ -37,8 +37,8 @@ export const DefaultDashboardPage = () => {
           <span className="dashboard-eyebrow">YOUR BUSINESS AT A GLANCE</span>
           <Typography.Title level={2}>Business overview</Typography.Title>
           <p>
-            Welcome back{user?.firstName ? `, ${user.firstName}` : ''}. Here is
-            what?s happening across your workspace.
+            Welcome back{user?.firstName ? `, ${user.firstName}` : ''}. Here’s
+            what’s happening across your workspace.
           </p>
         </div>
         <span className="dashboard-intro-icon">

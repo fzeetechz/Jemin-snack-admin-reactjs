@@ -2,6 +2,44 @@
   padding: 0;
 }
 
+.roles-page .ant-table-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.roles-page .ant-table-thead > tr > th {
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+}
+
+.roles-page .ant-table-tbody > tr > td {
+  padding: 12px;
+  font-size: 13px;
+}
+
+.roles-page .ant-table-cell .ant-tag {
+  margin-inline-end: 4px;
+  font-size: 11px;
+  line-height: 20px;
+  padding-inline: 7px;
+}
+
+.role-name-cell {
+  align-items: flex-start;
+}
+
+.role-description {
+  display: inline-block;
+  max-width: 280px;
+  font-size: 13px;
+}
+
 .roles-drawer-content {
   display: flex;
   gap: 24px;

@@ -74,10 +74,12 @@ const ShiftsSettingsTab = () => {
               danger
               type="text"
               icon={<DeleteOutlined />}
+              aria-label={shift._id ? 'Move to Trash' : 'Remove draft'}
+              title={shift._id ? 'Move to Trash' : 'Remove draft'}
               disabled={deletingSetting || (!canDeleteSettings && !!shift._id)}
               onClick={() => removeShift(index)}
             >
-              {shift._id ? 'Move to Trash' : 'Remove draft'}
+              {!shift._id && 'Remove draft'}
             </Button>
           }
           style={{ border: '1px solid #f0f0f0', borderRadius: 18 }}

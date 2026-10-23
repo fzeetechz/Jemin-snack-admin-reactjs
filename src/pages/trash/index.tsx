@@ -3,18 +3,16 @@ import {
   Alert,
   Button,
   Card,
-  Drawer,
   Flex,
   Input,
   Modal,
   Select,
   Space,
   Table,
-  Tag,
   Typography,
   message,
 } from 'antd';
-import { Eye, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import { RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { trashRecordModule, trashService } from '../../services/trashService';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -30,9 +28,6 @@ const TrashPage = () => {
   const [search, setSearch] = useState('');
   const [model, setModel] = useState<string>();
   const [selected, setSelected] = useState<React.Key[]>([]);
-  const [detail, setDetail] = useState<unknown>();
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
   const { canRead, canUpdate, canDelete } = usePermissions();
   const canView = (row: TrashRecord) =>
     canRead('trash') || canRead(trashRecordModule(row));
@@ -230,6 +225,8 @@ const TrashPage = () => {
             <Typography.Text>{selectedRows.length} selected</Typography.Text>
             <Button
               icon={<RotateCcw size={16} />}
+              aria-label="Restore selected records"
+              title="Restore selected records"
               disabled={
                 busy ||
                 loading ||
@@ -237,12 +234,12 @@ const TrashPage = () => {
                 !selectedRows.every(canRestore)
               }
               onClick={() => confirm(selectedRows, true)}
-            >
-              Restore selected
-            </Button>
+            />
             <Button
               danger
               icon={<Trash2 size={16} />}
+              aria-label="Delete selected permanently"
+              title="Delete selected permanently"
               disabled={
                 busy ||
                 loading ||
@@ -250,9 +247,7 @@ const TrashPage = () => {
                 !selectedRows.every(canRemove)
               }
               onClick={() => confirm(selectedRows, false)}
-            >
-              Delete selected permanently
-            </Button>
+            />
           </Space>
         </Flex>
         <Table<TrashRecord>
@@ -275,28 +270,6 @@ const TrashPage = () => {
           columns={[
             { title: 'Record', dataIndex: 'name' },
             {
-              title: 'Model',
-              dataIndex: 'modelType',
-              render: (value: string, row) => (
-                <Space>
-                  <Tag>{value}</Tag>
-                  {row.source === 'device' && (
-                    <Tag color="orange">This device</Tag>
-                  )}
-                </Space>
-              ),
-            },
-            {
-              title: 'Original ID',
-              dataIndex: 'originalId',
-              render: (value: string) =>
-                value ? (
-                  <Typography.Text copyable>{value}</Typography.Text>
-                ) : (
-                  '-'
-                ),
-            },
-            {
               title: 'Deleted at',
               dataIndex: 'deletedAt',
               render: (value: string) =>
@@ -312,50 +285,26 @@ const TrashPage = () => {
               key: 'actions',
               render: (_, row) => (
                 <Space>
-                  <Button
-                    size="small"
-                    icon={<Eye size={15} />}
-                    disabled={busy || detailLoading}
-                    onClick={async () => {
-                      setDetail(undefined);
-                      setDetailOpen(true);
-                      setDetailLoading(true);
-                      try {
-                        setDetail(await trashService.get(row._id));
-                      } catch (err) {
-                        setDetailOpen(false);
-                        message.error(
-                          err instanceof Error
-                            ? err.message
-                            : 'Unable to load record'
-                        );
-                      } finally {
-                        setDetailLoading(false);
-                      }
-                    }}
-                  >
-                    View
-                  </Button>
                   {canRestore(row) && (
                     <Button
                       size="small"
                       icon={<RotateCcw size={15} />}
+                      aria-label="Restore record"
+                      title="Restore"
                       disabled={busy}
                       onClick={() => confirm([row], true)}
-                    >
-                      Restore
-                    </Button>
+                    />
                   )}
                   {canRemove(row) && (
                     <Button
                       size="small"
                       danger
                       icon={<Trash2 size={15} />}
+                      aria-label="Delete permanently"
+                      title="Delete permanently"
                       disabled={busy}
                       onClick={() => confirm([row], false)}
-                    >
-                      Delete permanently
-                    </Button>
+                    />
                   )}
                 </Space>
               ),
@@ -363,17 +312,6 @@ const TrashPage = () => {
           ]}
         />
       </Card>
-      <Drawer
-        title="Deleted record details"
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        loading={detailLoading}
-        size="large"
-      >
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-          {JSON.stringify(detail, null, 2)}
-        </pre>
-      </Drawer>
     </div>
   );
 };

@@ -450,7 +450,7 @@ const QuotationsPage = () => {
       </Flex>
 
       <Card>
-        <ListingTable trashConfig={{ canDelete: canDelete('quotations'), modelType: 'quotation', onComplete: fetchQuotations }} listingTitle="Orders" fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
+        <ListingTable trashConfig={{ canDelete: canDelete('quotations'), modelType: 'quotation', onComplete: fetchQuotations }} listingTitle="Orders" showRecordId={false} fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
           rowKey="_id"
           columns={columns}
           dataSource={quotations}

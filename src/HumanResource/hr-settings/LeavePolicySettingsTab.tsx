@@ -98,10 +98,12 @@ const LeavePolicySettingsTab = () => {
               danger
               type="text"
               icon={<DeleteOutlined />}
+              aria-label={policy._id ? 'Move to Trash' : 'Remove draft'}
+              title={policy._id ? 'Move to Trash' : 'Remove draft'}
               disabled={deletingSetting || (!canDeleteSettings && !!policy._id)}
               onClick={() => removeLeavePolicy(index)}
             >
-              {policy._id ? 'Move to Trash' : 'Remove draft'}
+              {!policy._id && 'Remove draft'}
             </Button>
           }
           style={{ borderRadius: 18, border: '1px solid #f0f0f0' }}

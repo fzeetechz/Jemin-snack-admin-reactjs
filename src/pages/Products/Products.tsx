@@ -41,6 +41,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { BASEURL } from 'src/services/api/apiClient';
 import useProducts from 'src/services/useProducts';
 import { usePermissions } from 'src/hooks';
+import './Products.css';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -710,7 +711,7 @@ const Products = () => {
   ];
 
   return (
-    <div className="module-page">
+    <div className="module-page product-catalog-page">
       {/* {JSON.stringify(canCreate('products'))} <br />
       {JSON.stringify(canUpdate('products'))} <br />
       {JSON.stringify(canDelete('products'))} */}
@@ -720,6 +721,7 @@ const Products = () => {
         style={{ display: 'flex', width: '100%' }}
       >
         <div
+          className="product-catalog-header"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -793,8 +795,9 @@ const Products = () => {
         </Row>
 
         <Row gutter={[16, 16]} align="top">
-          <Col xs={24} xl={9}>
+          <Col xs={24} xl={24} className="catalog-types-column">
             <Card
+              className="catalog-types-card"
               title="Product Types"
               extra={
                 <Space>
@@ -915,8 +918,8 @@ const Products = () => {
             </Card>
           </Col>
 
-          <Col xs={24} xl={15}>
-            <Card title="Products">
+          <Col xs={24} xl={24} className="catalog-products-column">
+            <Card title="Products" className="catalog-products-card">
               <ListingTable
                 trashConfig={{
                   canDelete: canDelete('products'),

@@ -18,7 +18,7 @@ export function withTrashActions<T extends object>(
     return {
       ...column,
       fixed: 'right' as const,
-      width: column.width ? Number(column.width) + 48 : 260,
+      width: column.width ? Number(column.width) + 28 : 168,
       render: (value: unknown, row: T, index: number) => (
         <Space size={4}>
           {column.render?.(value, row, index) as ReactNode}

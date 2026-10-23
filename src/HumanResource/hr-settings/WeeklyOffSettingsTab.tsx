@@ -59,10 +59,10 @@ const WeeklyOffSettingsTab = () => {
                 danger
                 disabled={deletingSetting}
                 icon={<DeleteOutlined />}
+                aria-label="Move policy to Trash"
+                title="Move policy to Trash"
                 onClick={removeWeeklyOffPolicy}
-              >
-                Move policy to Trash
-              </Button>
+              />
             )}
           </Space>
         }

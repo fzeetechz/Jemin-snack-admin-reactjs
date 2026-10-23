@@ -19,6 +19,7 @@ import {
   message,
   Divider,
   Select,
+  Typography,
 } from 'antd';
 import {
   getModuleConfig,
@@ -46,6 +47,7 @@ type Role = {
   createdAt?: string;
   isSystem: boolean;
   __v?: number;
+  responseKeys?: string[];
 };
 
 const RolesPage = () => {
@@ -67,6 +69,7 @@ const RolesPage = () => {
 
   const normalizeRole = (role: any): Role => ({
     ...role,
+    responseKeys: Object.keys(role ?? {}),
     name: role?.name ?? '',
     description: role?.description ?? '',
     permissions: Array.isArray(role?.permissions) ? role.permissions : [],
@@ -119,18 +122,29 @@ const RolesPage = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: 180,
       render: (name: string, record: Role) => (
-        <Space>
-          <Tag color={record.isSystem ? 'red' : 'blue'}>{name}</Tag>
-          {record.isSystem && <Tag color="red">System</Tag>}
+        <Space direction="vertical" size={4} className="role-name-cell">
+          <Typography.Text strong>{name}</Typography.Text>
+          {record.isSystem && <Tag color="red">System role</Tag>}
         </Space>
       ),
     },
-    { title: 'Description', dataIndex: 'description', key: 'description' },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      render: (description: string) => (
+        <Typography.Text type="secondary" className="role-description">
+          {description || 'No description provided'}
+        </Typography.Text>
+      ),
+    },
     {
       title: 'Permissions',
       dataIndex: 'permissions',
       key: 'permissions',
+      width: 240,
       render: (permissions?: PermissionObj[]) => {
         const safePermissions = Array.isArray(permissions) ? permissions : [];
         if (safePermissions.length === 0) {
@@ -163,11 +177,13 @@ const RolesPage = () => {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 115,
       render: (_: string, role: Role) => formatCreatedDate(role),
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 120,
       render: (role: Role) => (
         <Space>
           {canUpdate('roles') && (
@@ -342,8 +358,40 @@ const RolesPage = () => {
               row.isSystem ? 'System roles cannot be deleted.' : undefined,
           }}
           listingTitle="Roles"
+          showRecordId={false}
           onRefresh={getAllRoles}
           fields={LISTING_FIELDS.roles}
+          detailFields={(role) =>
+            (role.responseKeys ?? Object.keys(role))
+              .filter(
+                (key) =>
+                  ![
+                    '_id',
+                    'id',
+                    '__v',
+                    'responseKeys',
+                    'permissions',
+                  ].includes(key)
+              )
+              .map((key) => ({
+                key,
+                label:
+                  ({
+                    isAdmin: 'Administrator access',
+                    isSystem: 'Role type',
+                    users_count: 'Users assigned',
+                    usersCount: 'Users assigned',
+                  } as Record<string, string>)[key] ??
+                  key
+                    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                    .replace(/^./, (character) => character.toUpperCase()),
+              }))
+          }
+          renderDetailValue={(role, field) => {
+            const value = (role as Record<string, unknown>)[field.key];
+            if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+            return undefined;
+          }}
           filterKeys={['isSystem']}
           importConfig={
             canCreate('roles') && listingImport('roles', getAllRoles)
@@ -352,7 +400,9 @@ const RolesPage = () => {
           columns={columns}
           dataSource={roles}
           pagination={{ pageSize: 10 }}
-          rowHoverable={false}
+          rowHoverable
+          size="middle"
+          scroll={{ x: 760 }}
         />
       </Card>
 

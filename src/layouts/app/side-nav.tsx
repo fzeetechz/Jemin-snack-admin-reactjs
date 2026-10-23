@@ -345,8 +345,9 @@ const SideNav = ({ ...others }: SideNavProps) => {
       width={248}
       {...others}
       className={`workspace-sidebar ${others.className ?? ''}`}
-      style={{ ...others.style, background: '#18212d', border: 'none' }}
+      style={{ ...others.style, background: 'linear-gradient(180deg, #0f1623 0%, #131d2e 60%, #0f1623 100%)', border: 'none' }}
     >
+      {/* Brand */}
       <div className="sidebar-brand">
         <Logo
           color="#ffffff"
@@ -354,42 +355,46 @@ const SideNav = ({ ...others }: SideNavProps) => {
           href="/"
           justify="flex-start"
           gap="small"
-          imgSize={{ h: 38, w: 38 }}
+          imgSize={{ h: 36, w: 36 }}
           style={{ padding: 0 }}
         />
-        <span className="sidebar-brand-caption">BUSINESS WORKSPACE</span>
+        <span className="sidebar-brand-caption">JEMINI CRM</span>
       </div>
+
+      {/* Workspace pill */}
       <div className="sidebar-workspace">
         <span className="sidebar-workspace-icon">
-          <Building2 size={19} />
+          <Building2 size={17} />
         </span>
         <div>
           <strong>Jemini Snacks</strong>
           <span>Team workspace</span>
         </div>
-        <ChevronRight size={15} aria-hidden="true" />
+        <ChevronRight size={14} aria-hidden="true" />
       </div>
+
+      {/* Navigation */}
       <div className="sidebar-navigation">
-        <div className="sidebar-nav-label">WORKSPACE</div>
         <ConfigProvider
           theme={{
             components: {
               Menu: {
                 itemBg: 'transparent',
                 subMenuItemBg: 'transparent',
-                itemSelectedBg: '#b42014',
-                itemHoverBg: 'rgba(255,255,255,0.06)',
-                itemSelectedColor: '#ffffff',
-                itemColor: '#aab6c7',
-                itemHoverColor: '#ffffff',
-                subMenuItemSelectedColor: '#ffffff',
-                groupTitleColor: '#718198',
+                itemSelectedBg: 'rgba(180,32,20,0.18)',
+                itemHoverBg: 'rgba(255,255,255,0.05)',
+                itemSelectedColor: '#ff6b5b',
+                itemColor: '#8fa3bc',
+                itemHoverColor: '#e2eaf4',
+                subMenuItemSelectedColor: '#ff6b5b',
+                groupTitleColor: '#3d5166',
                 groupTitleFontSize: 10,
-                itemHeight: 43,
-                iconSize: 19,
+                itemHeight: 42,
+                iconSize: 18,
                 fontSize: 13,
-                itemMarginBlock: 4,
-                popupBg: mytheme === 'dark' ? '#18212d' : '#ffffff',
+                itemMarginBlock: 2,
+                itemBorderRadius: 10,
+                popupBg: mytheme === 'dark' ? '#131d2e' : '#ffffff',
               },
             },
           }}
@@ -404,12 +409,14 @@ const SideNav = ({ ...others }: SideNavProps) => {
           />
         </ConfigProvider>
       </div>
+
+      {/* Footer */}
       <div className="sidebar-footer">
         <span className="sidebar-footer-icon">
-          <ShieldCheck size={18} />
+          <ShieldCheck size={16} />
         </span>
         <div>
-          <strong>Your business, connected.</strong>
+          <strong>Secured &amp; Connected</strong>
           <span>Jemini Snacks CRM</span>
         </div>
       </div>
