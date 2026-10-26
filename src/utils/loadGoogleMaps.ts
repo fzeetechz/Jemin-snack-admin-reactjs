@@ -40,7 +40,7 @@ export const loadGoogleMaps = (): Promise<void> => {
       key: apiKey,
       loading: 'async',
       callback: 'initStaffLocationMap',
-      libraries: 'maps,marker',
+      libraries: 'maps,marker,geometry',
       v: 'weekly',
     });
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`;

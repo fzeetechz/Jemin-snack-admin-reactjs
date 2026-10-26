@@ -1,9 +1,11 @@
 import { theme } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import GoogleRouteMap from './GoogleRouteMap';
-import type { RoutePoint, RouteSegment, StayPoint } from './GoogleRouteMap';
+import type { RoutePoint, RouteSegment, StayPoint, FocusedPosition, StaffInfo } from './GoogleRouteMap';
 
-interface LocationData {
+export type { RoutePoint, RouteSegment, StayPoint, FocusedPosition, StaffInfo };
+
+export interface LocationData {
   routes?: { points: { lat: number; lng: number; timestamp: string }[] }[];
   stays?: StayPoint[];
   summary?: {
@@ -33,13 +35,29 @@ const fmtTime = (iso: string) =>
   });
 
 const fmtDuration = (sec: number) => {
-  if (sec < 60) return `${sec}s`;
+  if (sec < 60) return `${Math.round(sec)}s`;
   const m = Math.floor(sec / 60);
-  const s = sec % 60;
+  const s = Math.round(sec % 60);
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 };
 
-const Map = ({ data }: { data: LocationData | null }) => {
+interface MapProps {
+  data: LocationData | null;
+  focusedPosition?: FocusedPosition | null;
+  onSelectStay?: (stay: StayPoint, index: number) => void;
+  selectedStayIndex?: number | null;
+  staffInfo?: StaffInfo | null;
+  height?: string | number;
+}
+
+const Map = ({
+  data,
+  focusedPosition,
+  onSelectStay,
+  selectedStayIndex,
+  staffInfo,
+  height = '68vh',
+}: MapProps) => {
   const { token } = theme.useToken();
   const [pointsData, setPointsData] = useState<RoutePoint[]>([]);
   const [timeFilter, setTimeFilter] = useState({ start: '', end: '' });
@@ -70,10 +88,8 @@ const Map = ({ data }: { data: LocationData | null }) => {
     }
   }, [data, timeFilter]);
 
-  const { segments, avgTimePer100m } = useMemo(() => {
+  const { segments } = useMemo(() => {
     const segs: RouteSegment[] = [];
-    let totalDistance = 0;
-    let totalTime = 0;
 
     for (let i = 1; i < pointsData.length; i++) {
       const p1 = pointsData[i - 1];
@@ -81,13 +97,10 @@ const Map = ({ data }: { data: LocationData | null }) => {
       const distance = haversine(p1.lat, p1.lng, p2.lat, p2.lng);
       const timeDiff = (p2.time.getTime() - p1.time.getTime()) / 1000;
 
-      totalDistance += distance;
-      totalTime += timeDiff;
-
-      // Color: time taken between 2 points
-      let color = 'green';
-      if (timeDiff > 120) color = 'red';
-      else if (timeDiff > 30) color = 'orange';
+      // Color coding: green = fast moving, orange = medium, red = traffic / slow
+      let color = '#10b981'; // green
+      if (timeDiff > 120) color = '#ef4444'; // slow / traffic
+      else if (timeDiff > 30) color = '#f59e0b'; // moderate
 
       segs.push({
         positions: [
@@ -108,148 +121,101 @@ const Map = ({ data }: { data: LocationData | null }) => {
       });
     }
 
-    const avg = totalDistance > 0 ? (totalTime / totalDistance) * 100 : 0;
-    return { segments: segs, avgTimePer100m: Math.round(avg) };
+    return { segments: segs };
   }, [pointsData]);
 
   const stays = data?.stays ?? EMPTY_STAYS;
-  const summary = data?.summary;
 
   return (
-    <div style={{ fontFamily: token.fontFamily }}>
-      {/* Summary Cards */}
-      {summary && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            marginBottom: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          {[
-            {
-              label: 'Total Distance',
-              value: `${(summary.totalDistance / 1000).toFixed(2)} km`,
-              icon: '📍',
-            },
-            {
-              label: 'Moving Time',
-              value: fmtDuration(Math.round(summary.totalMovingTime)),
-              icon: '🚶',
-            },
-            {
-              label: 'Stay Time',
-              value: fmtDuration(summary.totalStayTime),
-              icon: '🛑',
-            },
-            { label: 'Avg per 100m', value: `${avgTimePer100m}s`, icon: '⏱️' },
-            { label: 'Stops', value: `${stays.length}`, icon: '📌' },
-          ].map((s) => (
-            <div
-              key={s.label}
-              style={{
-                flex: 1,
-                minWidth: 100,
-                background: token.colorBgContainer,
-                border: `1px solid ${token.colorBorderSecondary}`,
-                borderRadius: 10,
-                padding: '10px 14px',
-                textAlign: 'center',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              }}
-            >
-              <div style={{ fontSize: 20 }}>{s.icon}</div>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: token.colorText,
-                }}
-              >
-                {s.value}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: token.colorTextSecondary,
-                  marginTop: 2,
-                }}
-              >
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Time Filter */}
+    <div style={{ fontFamily: token.fontFamily, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Legend & Quick Filter */}
       <div
         style={{
           display: 'flex',
-          gap: 10,
-          flexWrap: 'wrap',
-          marginBottom: 10,
+          justifyContent: 'space-between',
           alignItems: 'center',
-        }}
-      >
-        <span style={{ fontSize: 13, color: token.colorTextSecondary }}>
-          Filter:
-        </span>
-        <input
-          type="datetime-local"
-          style={{
-            borderRadius: 6,
-            border: `1px solid ${token.colorBorder}`,
-            color: token.colorText,
-            background: token.colorBgContainer,
-            padding: '4px 8px',
-            fontSize: 13,
-          }}
-          onChange={(e) =>
-            setTimeFilter((p) => ({ ...p, start: e.target.value }))
-          }
-        />
-        <span style={{ color: token.colorTextSecondary }}>→</span>
-        <input
-          type="datetime-local"
-          style={{
-            borderRadius: 6,
-            border: `1px solid ${token.colorBorder}`,
-            color: token.colorText,
-            background: token.colorBgContainer,
-            padding: '4px 8px',
-            fontSize: 13,
-          }}
-          onChange={(e) =>
-            setTimeFilter((p) => ({ ...p, end: e.target.value }))
-          }
-        />
-      </div>
-
-      {/* Legend */}
-      <div
-        style={{
-          marginBottom: 10,
-          fontSize: 12,
-          display: 'flex',
-          gap: 16,
           flexWrap: 'wrap',
-          color: token.colorTextSecondary,
+          gap: 10,
+          background: token.colorBgContainer,
+          padding: '8px 12px',
+          borderRadius: 8,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          fontSize: 12,
         }}
       >
-        <span>🟢 Fast (&lt;30s)</span>
-        <span>🟠 Medium (30–120s)</span>
-        <span>🔴 Slow (&gt;120s)</span>
-        <span>🔵 Stay Point</span>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontWeight: 600, color: token.colorText }}>Route Legend:</span>
+          <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} /> Fast (&lt;30s)
+          </span>
+          <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} /> Medium (30–120s)
+          </span>
+          <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} /> Slow / Jam (&gt;120s)
+          </span>
+          <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            🛑 Stoppages ({stays.length})
+          </span>
+        </div>
+
+        {/* Optional Sub-hour DateTime Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: token.colorTextSecondary }}>Filter Range:</span>
+          <input
+            type="time"
+            style={{
+              borderRadius: 6,
+              border: `1px solid ${token.colorBorder}`,
+              color: token.colorText,
+              background: token.colorBgContainer,
+              padding: '2px 6px',
+              fontSize: 12,
+            }}
+            onChange={(e) => {
+              if (!e.target.value) {
+                setTimeFilter((p) => ({ ...p, start: '' }));
+                return;
+              }
+              const d = new Date();
+              const [h, m] = e.target.value.split(':');
+              d.setHours(parseInt(h, 10), parseInt(m, 10), 0);
+              setTimeFilter((p) => ({ ...p, start: d.toISOString() }));
+            }}
+          />
+          <span style={{ color: token.colorTextSecondary }}>→</span>
+          <input
+            type="time"
+            style={{
+              borderRadius: 6,
+              border: `1px solid ${token.colorBorder}`,
+              color: token.colorText,
+              background: token.colorBgContainer,
+              padding: '2px 6px',
+              fontSize: 12,
+            }}
+            onChange={(e) => {
+              if (!e.target.value) {
+                setTimeFilter((p) => ({ ...p, end: '' }));
+                return;
+              }
+              const d = new Date();
+              const [h, m] = e.target.value.split(':');
+              d.setHours(parseInt(h, 10), parseInt(m, 10), 59);
+              setTimeFilter((p) => ({ ...p, end: d.toISOString() }));
+            }}
+          />
+        </div>
       </div>
 
+      {/* Map Viewport Container */}
       <div
         style={{
-          height: '65vh',
+          height: height,
           borderRadius: 12,
           overflow: 'hidden',
           border: `1px solid ${token.colorBorderSecondary}`,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
         }}
       >
         <GoogleRouteMap
@@ -258,6 +224,10 @@ const Map = ({ data }: { data: LocationData | null }) => {
           stays={stays}
           formatDuration={fmtDuration}
           formatTime={fmtTime}
+          focusedPosition={focusedPosition}
+          onSelectStay={onSelectStay}
+          selectedStayIndex={selectedStayIndex}
+          staffInfo={staffInfo}
         />
       </div>
     </div>

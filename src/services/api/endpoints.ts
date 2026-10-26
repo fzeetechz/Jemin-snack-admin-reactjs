@@ -73,6 +73,10 @@ export const API_ENDPOINTS = {
     GENERATE_ALL_PAYSLIPS: '/staff/salary/generateAllPayslips',
     DELETE: (id: string) => `/salary/delete/${id}`,
   },
+  DEVICE: {
+    STATUS: (userId: string) => `/device/status/${userId}`,
+    LIST: `/device/list`,
+  },
   LOCATION: {
     GET: '/staff/location/history',
   },
