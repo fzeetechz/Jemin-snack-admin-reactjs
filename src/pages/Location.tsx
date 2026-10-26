@@ -87,6 +87,11 @@ interface DeviceTelemetry {
     backgroundLocation?: boolean;
     coarseLocation?: boolean;
     isGpsEnabled?: boolean;
+    batteryOptimizationIgnored?: boolean;
+    receiveBootCompleted?: boolean;
+    wakeLock?: boolean;
+    foregroundServiceLocation?: boolean;
+    scheduleExactAlarm?: boolean;
     camera?: boolean;
     notification?: boolean;
     lastCheckedAt?: string;
@@ -933,7 +938,7 @@ const Location = () => {
                                   )}
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span>Background Location Permission:</span>
+                                  <span>Background Location ("All the time"):</span>
                                   {deviceStatus?.permissions?.backgroundLocation !== false ? (
                                     <Tag color="success" style={{ margin: 0 }}>🟢 GRANTED</Tag>
                                   ) : (
@@ -946,6 +951,38 @@ const Location = () => {
                                     <Tag color="success" style={{ margin: 0 }}>🟢 GRANTED</Tag>
                                   ) : (
                                     <Tag color="error" style={{ margin: 0 }}>🔴 DENIED</Tag>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Battery Optimization (Background):</span>
+                                  {deviceStatus?.permissions?.batteryOptimizationIgnored ? (
+                                    <Tag color="success" style={{ margin: 0 }}>🟢 UNRESTRICTED</Tag>
+                                  ) : (
+                                    <Tag color="warning" style={{ margin: 0 }}>⚠️ OPTIMIZED / RESTRICTED</Tag>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Reboot Auto-Start Permission:</span>
+                                  {deviceStatus?.permissions?.receiveBootCompleted !== false ? (
+                                    <Tag color="success" style={{ margin: 0 }}>🟢 GRANTED</Tag>
+                                  ) : (
+                                    <Tag color="error" style={{ margin: 0 }}>🔴 DENIED</Tag>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Keep Awake / WakeLock:</span>
+                                  {deviceStatus?.permissions?.wakeLock !== false ? (
+                                    <Tag color="success" style={{ margin: 0 }}>🟢 GRANTED</Tag>
+                                  ) : (
+                                    <Tag color="error" style={{ margin: 0 }}>🔴 DENIED</Tag>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Push Notifications:</span>
+                                  {deviceStatus?.permissions?.notification !== false ? (
+                                    <Tag color="success" style={{ margin: 0 }}>🟢 GRANTED</Tag>
+                                  ) : (
+                                    <Tag color="warning" style={{ margin: 0 }}>⚠️ BLOCKED</Tag>
                                   )}
                                 </div>
                               </div>
