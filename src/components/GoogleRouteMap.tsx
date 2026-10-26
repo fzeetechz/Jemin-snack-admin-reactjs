@@ -699,7 +699,7 @@ const GoogleRouteMap = ({
       } else {
         avatarBox.innerHTML = `
           <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #06b6d4); display: flex; align-items: center; justify-content: center; font-size: 24px; border: 3px solid white;">
-            dfds
+            🏍️
           </div>
         `;
       }
