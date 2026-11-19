@@ -66,7 +66,7 @@ type PayslipSalary = {
 
 type DailyPayroll = {
   date: string;
-  status: 'present' | 'halfDay' | 'absent' | 'paidLeave' | 'unpaidLeave' | 'holiday' | 'weeklyOff';
+  status: 'present' | 'halfDay' | 'absent' | 'paidLeave' | 'unpaidLeave' | 'holiday' | 'weeklyOff' | 'notEmployed';
   checkIn: string | null;
   checkOut: string | null;
   workMinutes: number | null;
@@ -117,7 +117,7 @@ const decimal = (value: number) =>
 
 const dailyStatus: Record<DailyPayroll['status'], string> = {
   present: 'Present', halfDay: 'Half day', absent: 'Absent', paidLeave: 'Paid leave',
-  unpaidLeave: 'Unpaid leave', holiday: 'Holiday', weeklyOff: 'Weekly off',
+  unpaidLeave: 'Unpaid leave', holiday: 'Holiday', weeklyOff: 'Weekly off', notEmployed: 'Before joining',
 };
 const displayTime = (value: string | null) => value
   ? new Date(value).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
@@ -317,7 +317,7 @@ const SalarySlip = () => {
                     <Card size="small" title="1. Calculation period" style={{ height: '100%' }}>
                       <Flex vertical gap={8}>
                         <Text>Current month: attendance, holidays and weekly offs count through today, in India time.</Text>
-                        <Text type="secondary">Past months use the full month. Future months cannot be generated.</Text>
+                        <Text type="secondary">Dates before the joining date are excluded. If no joining date is set, the staff account creation date is used. Past months use the full month; future months cannot be generated.</Text>
                       </Flex>
                     </Card>
                   </Col>

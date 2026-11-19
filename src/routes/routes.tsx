@@ -1,3 +1,4 @@
+import MyHR from '../HumanResource/MyHR';
 import {
   Navigate,
   createBrowserRouter,
@@ -271,6 +272,10 @@ const router = createBrowserRouter([
     ),
     errorElement: <ErrorPage />,
     children: [
+      {
+        path: 'my',
+        element: <MyHR />,
+      },
       {
         path: 'employeee/attendance',
         element: <Attendance />,

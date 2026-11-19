@@ -1,17 +1,21 @@
 import './workspace.css';
 import {
+  Alert,
   Avatar,
   Button,
   Dropdown,
   Flex,
   FloatButton,
   Layout,
+  Modal,
+  Select,
   message,
   Tooltip,
 } from 'antd';
 import {
   ChevronDown,
   LogOut,
+  LogIn,
   Menu,
   PanelLeftClose,
   UserRound,
@@ -35,8 +39,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import { imageUrl } from '../../utils/convertor';
 import type { ReactNode } from 'react';
 import type { MenuProps } from 'antd';
+import { tokenStorage } from '../../services/auth/tokenStorage';
+import { apiRequest } from '../../services/api/apiClient';
 
 const { Content } = Layout;
+
+type SwitchableStaff = {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  status?: string;
+  isAdmin?: boolean;
+  roleId?: { name?: string } | null;
+};
 
 export const AppLayout = ({ children }: { children: ReactNode }) => {
   const isMobile = useMediaQuery({ maxWidth: 769 });
@@ -47,6 +63,57 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
   const nodeRef = useRef(null);
   const floatBtnRef = useRef(null);
   const { logout, user } = useAuth();
+  const staffSession = tokenStorage.getStaffSession();
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [switchLoading, setSwitchLoading] = useState(false);
+  const [staffList, setStaffList] = useState<SwitchableStaff[]>([]);
+  const [staffId, setStaffId] = useState<string>();
+  const openStaffSwitcher = async () => {
+    setSwitchOpen(true);
+    setStaffId(undefined);
+    setStaffLoading(true);
+    try {
+      const staff: SwitchableStaff[] = [];
+      let page = 1;
+      while (true) {
+        const response = await apiRequest.get<any>('/staff', { params: { page, limit: 100, status: 'active' } });
+        const batch = response?.data?.items;
+        if (!Array.isArray(batch)) throw new Error('Invalid staff list');
+        staff.push(...batch);
+        const pages = Number(response?.data?.pagination?.pages ?? 1);
+        if (!Number.isFinite(pages) || page >= pages) break;
+        page += 1;
+      }
+      setStaffList(staff.filter(person => person.status === 'active' && !person.isAdmin && person.roleId));
+    } catch {
+      setStaffList([]);
+      message.error('Unable to load staff');
+    } finally { setStaffLoading(false); }
+  };
+  const switchToStaff = async () => {
+    if (!staffId) return;
+    setSwitchLoading(true);
+    try {
+      const response = await apiRequest.post<any>('/auth/staff-session', { staffId });
+      if (!response?.data?.token || !response?.data?.user) throw new Error('Invalid staff session');
+      tokenStorage.startStaffSession(response.data.token, response.data.user);
+      window.location.assign('/');
+    } catch {
+      message.error('Unable to log in as staff');
+      setSwitchLoading(false);
+    }
+  };
+  const [endingStaffSession, setEndingStaffSession] = useState(false);
+  const endStaffSession = async () => {
+    setEndingStaffSession(true);
+    try { await apiRequest.post('/auth/staff-session/end'); }
+    catch { message.warning('Session could not be ended on the server; it will expire automatically.'); }
+    finally {
+      tokenStorage.endStaffSession();
+      window.location.assign('/');
+    }
+  };
   const page = getPageMeta(location.pathname);
   const PageIcon = page.icon;
   const fullName =
@@ -63,6 +130,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
 
   const handleLogout = async () => {
     message.open({ type: 'loading', content: 'Signing you out' });
+    if (staffSession) { await endStaffSession(); return; }
     await logout();
     message.destroy();
     navigate(PATH_AUTH.signin, { replace: true });
@@ -148,6 +216,13 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </Flex>
             <Flex align="center" gap={20}>
+              {(user as any)?.isAdmin && !staffSession && (
+                <Tooltip title="Log in as a staff member">
+                  <Button icon={<LogIn size={16} />} onClick={() => void openStaffSwitcher()} aria-label="Login as Staff">
+                    {!isMobile && 'Login as Staff'}
+                  </Button>
+                </Tooltip>
+              )}
               <span className="header-date">
                 {new Intl.DateTimeFormat('en-IN', {
                   weekday: 'short',
@@ -179,6 +254,9 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
               </Dropdown>
             </Flex>
           </HeaderNav>
+          {staffSession && (
+            <Alert type="warning" showIcon message={`Managing as ${fullName}`} description="Actions use this staff member’s permissions and are attributed to your admin session." action={<Button onClick={() => void endStaffSession()} loading={endingStaffSession}>Return to admin</Button>} />
+          )}
           <Content className="workspace-content">
             <TransitionGroup>
               <SwitchTransition>
@@ -210,6 +288,21 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
           <FooterNav className="workspace-footer" />
         </Layout>
       </Layout>
+      <Modal title="Login as Staff" open={switchOpen} onCancel={() => setSwitchOpen(false)} onOk={() => void switchToStaff()} okText="Continue as Staff" okButtonProps={{ disabled: !staffId, loading: switchLoading }} cancelButtonProps={{ disabled: switchLoading }} destroyOnHidden>
+        <p>Select the employee whose account you want to manage.</p>
+        <Select
+          aria-label="Select staff member"
+          showSearch
+          optionFilterProp="label"
+          placeholder="Search staff by name or email"
+          style={{ width: '100%' }}
+          loading={staffLoading}
+          value={staffId}
+          onChange={setStaffId}
+          options={staffList.map(person => ({ value: person._id, label: `${[person.firstName, person.lastName].filter(Boolean).join(' ') || 'Unnamed staff'}${person.email ? ` — ${person.email}` : ''}` }))}
+          notFoundContent={staffLoading ? 'Loading staff...' : 'No active staff found'}
+        />
+      </Modal>
       <LoginModal />
     </>
   );

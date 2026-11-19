@@ -116,6 +116,7 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
   ),
 
   getItem('Human Resource', 'group-ops', null, [], 'group'),
+  getItem(<Link to="/hrms/my">My HR</Link>, '/hrms/my', <CalendarCheck2 size={19} strokeWidth={1.8} />),
   //  getItem(
   //   <Link to={PATH_CRM.customers}>Customers</Link>,
   //   PATH_CRM.customers,
@@ -225,6 +226,7 @@ function filterMenuByRole(
 ): MenuProps['items'] {
   const isAllowedKey = (k?: React.Key) => {
     if (typeof k !== 'string') return false;
+    if (k === '/hrms/my') return Boolean(user) && !isAdminUser(user);
     if (k === PATH_CRM.dashboard || isAdminUser(user)) return true;
 
     if (k === PATH_CRM.trash) return userPermissions.some((permission) => permission.actions.some((action) => ['read', 'view'].includes(action)));

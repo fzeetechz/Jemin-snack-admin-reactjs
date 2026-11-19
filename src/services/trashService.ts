@@ -7,6 +7,8 @@ export interface TrashRecord extends JsonRecord {
   modelType: string;
   originalId: string;
   name: string;
+  subtitle: string;
+  deletedByName: string;
   deletedAt: string;
   source: 'server' | 'device';
 }
@@ -114,7 +116,7 @@ export function parseModels(response: unknown): TrashModel[] {
       const row = asRecord(item);
       const value = String(
         row.modelType ?? row.key ?? row.value ?? row.model ?? row.name ?? ''
-      );
+      ).trim().toLowerCase();
       return {
         value,
         label: String(row.label ?? row.displayName ?? row.name ?? value),
@@ -138,10 +140,12 @@ export function parseTrashRecord(value: unknown): TrashRecord {
     data.companyName ??
     data.productName ??
     [data.firstName, data.lastName].filter(Boolean).join(' ');
+  const deletedBy = asRecord(row.deletedBy);
+  const deletedByName = String(deletedBy.name || [deletedBy.firstName, deletedBy.lastName].filter(Boolean).join(' ') || deletedBy.email || (typeof row.deletedBy === 'string' ? row.deletedBy : '') || 'Unknown');
   return {
     ...row,
     _id: String(row._id ?? row.id ?? ''),
-    modelType: String(row.modelType ?? row.model ?? ''),
+    modelType: String(row.modelType ?? row.model ?? row.modelName ?? '').toLowerCase(),
     originalId: String(
       row.originalId ??
         row.documentId ??
@@ -150,7 +154,9 @@ export function parseTrashRecord(value: unknown): TrashRecord {
         data.id ??
         ''
     ),
-    name: String(name || row.name || data.email || 'Deleted record'),
+    name: String(name || row.itemTitle || row.name || data.email || 'Deleted record'),
+    subtitle: String(row.itemSubtitle || data.phone || data.email || data.company || ''),
+    deletedByName,
     deletedAt: String(row.deletedAt ?? row.createdAt ?? ''),
     source: 'server',
   };
@@ -174,6 +180,8 @@ function deviceTrash(): TrashRecord[] {
       modelType: 'contract',
       originalId: String(row.id),
       name: String(row.subject ?? 'Contract'),
+      subtitle: String(row.customer_name ?? ''),
+      deletedByName: 'This device',
       deletedAt: String(row.deletedAt ?? ''),
       source: 'device',
     }));
@@ -277,8 +285,11 @@ export const trashService = {
     const remote = ids.filter((id) => !id.startsWith(LOCAL_PREFIX));
     if (remote.length === 1)
       await checked(apiRequest.post(endpoints.RESTORE(remote[0])));
-    else if (remote.length)
-      await checked(apiRequest.post(endpoints.RESTORE_BULK, { ids: remote }));
+    else if (remote.length) {
+      const result = await checked(apiRequest.post(endpoints.RESTORE_BULK, { ids: remote }));
+      const failed = asRecord(result.data).failed;
+      if (Array.isArray(failed) && failed.length) throw new Error(`${failed.length} record(s) could not be restored. Refresh to see the current list.`);
+    }
     changeDevice(
       ids.filter((id) => id.startsWith(LOCAL_PREFIX)),
       true

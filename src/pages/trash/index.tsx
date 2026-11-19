@@ -9,6 +9,7 @@ import {
   Select,
   Space,
   Table,
+  Tag,
   Typography,
   message,
 } from 'antd';
@@ -66,13 +67,13 @@ const TrashPage = () => {
         (row.source === 'device'
           ? model === 'device-contract'
           : row.modelType === model)) &&
-      [row.name, row.originalId, row._id, row.modelType].some((value) =>
+      [row.name, row.subtitle, row.deletedByName, row.originalId, row._id, row.modelType].some((value) =>
         value.toLowerCase().includes(search.toLowerCase().trim())
       )
   );
   const options = useMemo(() => {
     const map = new Map(models.map((item) => [item.value, item.label]));
-    rows.forEach((row) =>
+    visible.forEach((row) =>
       map.set(
         row.source === 'device' ? 'device-contract' : row.modelType,
         row.source === 'device'
@@ -81,7 +82,7 @@ const TrashPage = () => {
       )
     );
     return [...map].map(([value, label]) => ({ value, label }));
-  }, [models, rows]);
+  }, [models, rows, canRead]);
   const selectedRows = filtered.filter((row) => selected.includes(row._id));
   const run = async (action: () => Promise<unknown>, success: string) => {
     if (actionLock.current) return;
@@ -197,18 +198,18 @@ const TrashPage = () => {
         >
           <Space wrap>
             <Input.Search
-              placeholder="Search name or ID"
+              placeholder="Search record, details or deleted by"
               allowClear
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
                 setSelected([]);
               }}
-              style={{ width: 260 }}
+              style={{ width: 300 }}
             />
             <Select
               aria-label="Filter by model"
-              placeholder="All models"
+              placeholder="All record types"
               allowClear
               showSearch
               optionFilterProp="label"
@@ -268,7 +269,19 @@ const TrashPage = () => {
             showTotal: (total) => `${total} records`,
           }}
           columns={[
-            { title: 'Record', dataIndex: 'name' },
+            {
+              title: 'Record', key: 'record',
+              render: (_, row) => <Space direction="vertical" size={0}>
+                <Typography.Text strong>{row.name}</Typography.Text>
+                {row.subtitle && <Typography.Text type="secondary">{row.subtitle}</Typography.Text>}
+                {row.originalId && <Typography.Text type="secondary" copyable={{ text: row.originalId }}>ID: {row.originalId}</Typography.Text>}
+              </Space>,
+            },
+            {
+              title: 'Type', dataIndex: 'modelType',
+              render: (_value: string, row) => <Tag>{row.source === 'device' ? 'Contract (this device)' : models.find(item => item.value === row.modelType)?.label || row.modelType || 'Unknown'}</Tag>,
+            },
+            { title: 'Deleted by', dataIndex: 'deletedByName', render: (value: string) => value || 'Unknown' },
             {
               title: 'Deleted at',
               dataIndex: 'deletedAt',

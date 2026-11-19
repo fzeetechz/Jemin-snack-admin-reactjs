@@ -1,4 +1,4 @@
-import { Plus as PlusOutlined, Eye, KeyRound, Pencil } from 'lucide-react';
+import { Plus as PlusOutlined, Eye, KeyRound, Pencil, LogIn } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -10,6 +10,7 @@ import {
   Space,
   Tag,
   Drawer,
+  DatePicker,
   Form,
   Input,
   Select,
@@ -27,6 +28,10 @@ import ShiftSelector from 'src/components/ShiftSelector';
 import { getAttachmentUrl } from 'src/utils/convertor';
 import { getNameInitials } from 'src/utils';
 import ImageModal from 'src/components/ImageModal';
+import dayjs from 'dayjs';
+import { useAuth } from 'src/contexts/AuthContext';
+import { apiRequest } from 'src/services/api/apiClient';
+import { tokenStorage } from 'src/services/auth/tokenStorage';
 
 type UserStatus = 'active' | 'inactive';
 
@@ -43,6 +48,8 @@ type User = {
   password?: string;
   shiftId?: any;
   avatar?: string | null;
+  isAdmin?: boolean;
+  joiningDate?: string | null;
 };
 
 type Role = {
@@ -121,6 +128,20 @@ const StaffAvatar = ({ staff, onPreview }: StaffAvatarProps) => {
 
 const StaffPage = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser } = useAuth();
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const startStaffSession = async (staff: User) => {
+    setSwitchingId(staff._id);
+    try {
+      const response = await apiRequest.post<any>('/auth/staff-session', { staffId: staff._id });
+      if (!response?.data?.token || !response?.data?.user) throw new Error('Invalid staff session response');
+      tokenStorage.startStaffSession(response.data.token, response.data.user);
+      window.location.assign('/');
+    } catch {
+      message.error('Unable to start staff session');
+      setSwitchingId(null);
+    }
+  };
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [passwordStaff, setPasswordStaff] = useState<User | null>(null);
@@ -210,6 +231,7 @@ const StaffPage = () => {
     console.log(record);
     setEditingUser(record);
     form.setFieldsValue({
+      joiningDate: record.joiningDate ? dayjs(record.joiningDate) : null,
       firstName: record.firstName,
       lastName: record.lastName,
       email: record.email,
@@ -260,6 +282,7 @@ const StaffPage = () => {
 
       if (editingUser) {
         const updated = {
+          joiningDate: values.joiningDate?.format('YYYY-MM-DD') ?? null,
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
@@ -278,6 +301,7 @@ const StaffPage = () => {
         closeModal();
       } else {
         const newUser = {
+          joiningDate: values.joiningDate?.format('YYYY-MM-DD') ?? null,
           firstName: values.firstName,
           lastName: values.lastName,
           password: values.password,
@@ -450,6 +474,12 @@ const StaffPage = () => {
       width: 144,
       render: (_: any, record: User) => (
         <Space size={4}>
+          {(currentUser as any)?.isAdmin && !record.isAdmin && record.status === 'active' && (
+            <Tooltip title="Log in as this staff member">
+              <Button size="small" type="text" icon={<LogIn size={16} />} loading={switchingId === record._id}
+                onClick={() => void startStaffSession(record)} aria-label={`Log in as ${record.firstName} ${record.lastName}`} />
+            </Tooltip>
+          )}
           {canUpdate('users') && (
             <>
               <Tooltip title="Edit staff">
@@ -577,6 +607,9 @@ const StaffPage = () => {
         }
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="joiningDate" label="Joining date" extra="Used for payroll. If empty, the account creation date is used.">
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
           <Form.Item
             name="firstName"
             label="First Name"

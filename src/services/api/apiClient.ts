@@ -158,6 +158,11 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized - Token expired
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      if (tokenStorage.getStaffSession()) {
+        tokenStorage.endStaffSession();
+        window.location.href = '/';
+        return Promise.reject(error);
+      }
 
       await authService.logout();
 
