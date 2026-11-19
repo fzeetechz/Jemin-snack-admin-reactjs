@@ -55,13 +55,13 @@ const CALL_SUMMARY_ROWS = (stats: any) => [
 ];
 
 const LEAD_STATUS_COLORS: Record<string, string> = {
-  New: '#0ea5e9', Contacted: '#10b981', Qualified: '#8b5cf6', Lost: '#ef4444', Converted: '#06b6d4',
+  New: '#0ea5e9', Contacted: '#10b981', Qualified: '#8b5cf6', Proposal: '#f59e0b', Won: '#06b6d4', Lost: '#ef4444',
 };
 const CALL_STATUS_COLORS: Record<string, string> = {
   completed: '#10b981', failed: '#ef4444', busy: '#f59e0b', 'no-answer': '#94a3b8',
 };
 const FUNNEL_COLORS: Record<string, string> = {
-  New: '#0ea5e9', Contacted: '#8b5cf6', Qualified: '#f59e0b', Converted: '#10b981', Lost: '#ef4444',
+  New: '#0ea5e9', Contacted: '#8b5cf6', Qualified: '#f59e0b', Proposal: '#f97316', Won: '#10b981', Lost: '#ef4444',
 };
 const PRIORITY_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
   high:   { color: '#ef4444', bg: '#fef2f2', icon: Flame },
@@ -125,7 +125,7 @@ const SalesDashBoard = () => {
     { month: d.month, value: d.calls, type: 'Calls' },
   ]);
 
-  const funnelOrder = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
+  const funnelOrder = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost'];
   const byStatus: any[] = stats?.leads?.byStatus || [];
   const funnelData = funnelOrder
     .map((s) => ({ status: s, count: byStatus.find((x: any) => x.status === s)?.count || 0 }))
@@ -525,6 +525,9 @@ const SalesDashBoard = () => {
                       const type = act.type?.toLowerCase() || 'task';
                       const cfg = ACTIVITY_ICON[type] || ACTIVITY_ICON.task;
                       const AIcon = cfg.icon;
+                      const actor = act.userId || act.createdBy;
+                      const actorName = typeof actor === 'string' ? actor :
+                        [actor?.firstName, actor?.lastName].filter(Boolean).join(' ') || actor?.name || actor?.email || 'Agent';
                       return {
                         dot: (
                           <span className="activity-dot" style={{ background: cfg.color }}>
@@ -544,7 +547,7 @@ const SalesDashBoard = () => {
                                   {act.leadId?.name || act.title || 'Activity'}
                                 </Text>
                                 <Text type="secondary" style={{ fontSize: 11 }}>
-                                  {act.note || act.description || act.type || ''}
+                                  {act.content || act.note || act.description || act.type || ''}
                                 </Text>
                               </div>
                               <Text type="secondary" style={{ fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -553,10 +556,10 @@ const SalesDashBoard = () => {
                             </Flex>
                             <Flex align="center" gap={6} style={{ marginTop: 4 }}>
                               <Avatar size={16} style={{ background: '#e0e7ff', color: '#6366f1', fontSize: 9 }}>
-                                {(act.userId?.firstName?.[0] || act.createdBy?.[0] || 'U').toUpperCase()}
+                                {actorName.charAt(0).toUpperCase()}
                               </Avatar>
                               <Text type="secondary" style={{ fontSize: 10 }}>
-                                {act.userId?.firstName || act.createdBy || 'Agent'}
+                                {actorName}
                                 {act.createdAt ? ` · ${fmtTime(act.createdAt)}` : ''}
                               </Text>
                             </Flex>

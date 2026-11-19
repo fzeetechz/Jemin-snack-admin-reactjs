@@ -6,9 +6,12 @@ import HrDashBoard from 'src/components/dashboard/HrDashBoard';
 import SalesDashBoard from 'src/components/dashboard/SalesDashBoard';
 import Administration from 'src/components/dashboard/Administration';
 import TelecallerDashboard from 'src/components/dashboard/TelecallerDashboard';
+import LeadOverview from 'src/components/dashboard/LeadOverview';
+import { usePermissions } from 'src/hooks/usePermissions';
 
 export const DefaultDashboardPage = () => {
   const { user } = useAuth();
+  const { canRead } = usePermissions();
   const roleType = (user as any)?.roleType;
 
   const renderDashboard = () => {
@@ -46,6 +49,7 @@ export const DefaultDashboardPage = () => {
         </span>
       </div>
 
+      {canRead('leads') && <LeadOverview />}
       {renderDashboard()}
     </div>
   );
