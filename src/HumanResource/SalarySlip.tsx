@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Col,
+  Collapse,
   DatePicker,
   Drawer,
   Empty,
@@ -14,6 +15,8 @@ import {
   Row,
   Space,
   Statistic,
+  Switch,
+  Table,
   Tag,
   Typography,
   message,
@@ -44,6 +47,10 @@ type PayslipSummary = {
   paidDays: number;
   lateMinutes: number;
   overtimeHours: number;
+  daysElapsed?: number;
+  holidays?: number;
+  weeklyOffs?: number;
+  sandwichDays?: number;
 };
 
 type PayslipSalary = {
@@ -57,6 +64,16 @@ type PayslipSalary = {
   netSalary: number;
 };
 
+type DailyPayroll = {
+  date: string;
+  status: 'present' | 'halfDay' | 'absent' | 'paidLeave' | 'unpaidLeave' | 'holiday' | 'weeklyOff';
+  checkIn: string | null;
+  checkOut: string | null;
+  workMinutes: number | null;
+  checkoutEstimated: boolean;
+  sandwich: 'eligible' | 'pending' | 'none';
+};
+
 type PayslipRecord = {
   _id?: string;
   id?: string;
@@ -65,6 +82,12 @@ type PayslipRecord = {
   period: {
     month: number;
     year: number;
+    through?: string;
+  };
+  dailyBreakdown?: DailyPayroll[];
+  comparison?: {
+    withoutSandwich: { summary: PayslipSummary; salary: PayslipSalary };
+    withSandwich: { summary: PayslipSummary; salary: PayslipSalary };
   };
   summary: PayslipSummary;
   salary: PayslipSalary;
@@ -92,14 +115,26 @@ const decimal = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value || 0);
 
+const dailyStatus: Record<DailyPayroll['status'], string> = {
+  present: 'Present', halfDay: 'Half day', absent: 'Absent', paidLeave: 'Paid leave',
+  unpaidLeave: 'Unpaid leave', holiday: 'Holiday', weeklyOff: 'Weekly off',
+};
+const displayTime = (value: string | null) => value
+  ? new Date(value).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
+  : '—';
+
 const SalarySlip = () => {
   const { canDelete } = usePermissions();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
+  const [sandwich, setSandwich] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BulkPayslipResponse | null>(null);
-  const [selectedPayslip, setSelectedPayslip] = useState<PayslipRecord | null>(
-    null
-  );
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const displayedPayslips = useMemo(() => (data?.payslips ?? []).map((slip) => {
+    const option = sandwich ? slip.comparison?.withSandwich : slip.comparison?.withoutSandwich;
+    return option ? { ...slip, ...option } : slip;
+  }), [data, sandwich]);
+  const selectedPayslip = displayedPayslips.find((slip) => slip.employee._id === selectedEmployeeId) ?? null;
 
   const fetchPayslips = async (monthValue: Dayjs = selectedMonth) => {
     setLoading(true);
@@ -109,6 +144,7 @@ const SalarySlip = () => {
         {
           month: monthValue.month() + 1,
           year: monthValue.year(),
+          sandwich,
         }
       );
 
@@ -128,7 +164,7 @@ const SalarySlip = () => {
   }, []);
 
   const totals = useMemo(() => {
-    const payslips = data?.payslips ?? [];
+    const payslips = displayedPayslips;
 
     return payslips.reduce(
       (accumulator, payslip) => {
@@ -140,7 +176,7 @@ const SalarySlip = () => {
       },
       { gross: 0, net: 0, deductions: 0, overtime: 0 }
     );
-  }, [data]);
+  }, [displayedPayslips]);
 
   const columns: ColumnsType<PayslipRecord> = [
     {
@@ -183,6 +219,18 @@ const SalarySlip = () => {
       render: (_, record) => currency(record.salary.totalDeductions),
     },
     {
+      title: 'Without Sandwich',
+      key: 'withoutSandwich',
+      align: 'right',
+      render: (_, record) => record.comparison ? currency(record.comparison.withoutSandwich.salary.netSalary) : '—',
+    },
+    {
+      title: 'With Sandwich',
+      key: 'withSandwich',
+      align: 'right',
+      render: (_, record) => record.comparison ? currency(record.comparison.withSandwich.salary.netSalary) : '—',
+    },
+    {
       title: 'Net Salary',
       key: 'netSalary',
       align: 'right',
@@ -198,7 +246,7 @@ const SalarySlip = () => {
         <Button
           type="text"
           icon={<EyeOutlined />}
-          onClick={() => setSelectedPayslip(record)}
+          onClick={() => setSelectedEmployeeId(record.employee._id)}
         >
           View
         </Button>
@@ -221,9 +269,11 @@ const SalarySlip = () => {
           </div>
 
           <Space wrap>
+            <Space><Text>Sandwich rule</Text><Switch checked={sandwich} onChange={setSandwich} aria-label="Apply sandwich rule" disabled={Boolean(data && data.payslips.some((slip) => !slip.comparison))} /></Space>
             <DatePicker
               picker="month"
               allowClear={false}
+              disabledDate={(date) => date.isAfter(dayjs(), 'month')}
               value={selectedMonth}
               onChange={(value) => {
                 if (value) {
@@ -249,6 +299,69 @@ const SalarySlip = () => {
           </Space>
         </Flex>
       </Card>
+
+      <Collapse
+        items={[
+          {
+            key: 'payroll-rules',
+            label: (
+              <Flex vertical gap={2}>
+                <Text strong>How salary is calculated</Text>
+                <Text type="secondary">Period, attendance, leave and sandwich rules</Text>
+              </Flex>
+            ),
+            children: (
+              <Flex vertical gap={16}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} md={12}>
+                    <Card size="small" title="1. Calculation period" style={{ height: '100%' }}>
+                      <Flex vertical gap={8}>
+                        <Text>Current month: attendance, holidays and weekly offs count through today, in India time.</Text>
+                        <Text type="secondary">Past months use the full month. Future months cannot be generated.</Text>
+                      </Flex>
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card size="small" title="2. Per-day salary" style={{ height: '100%' }}>
+                      <Flex vertical gap={8}>
+                        <Text>Monthly gross salary is divided by the full month’s days or working days, based on HR Settings.</Text>
+                        <Text type="secondary">The monthly rate stays the same for a partial-month payslip.</Text>
+                      </Flex>
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card size="small" title="3. Attendance & leave" style={{ height: '100%' }}>
+                      <Flex vertical gap={8}>
+                        <Text>Approved CL, SL and PL use the annual leave allowance in date order. Leave beyond the allowance is unpaid.</Text>
+                        <Text type="secondary">When checkout is missing, work hours use the recorded shift end. No checkout is added to attendance.</Text>
+                      </Flex>
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card size="small" title="4. Other adjustments" style={{ height: '100%' }}>
+                      <Text>Late penalties, overtime and weekly offs follow HR settings and the employee’s assignment.</Text>
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Card size="small" title="Sandwich rule" extra={<Tag color={sandwich ? 'blue' : 'default'}>{sandwich ? 'Selected: on' : 'Selected: off'}</Tag>}>
+                  <Flex vertical gap={10}>
+                    <Text>Weekly offs or holidays between two days of absence or unpaid leave become unpaid when the rule is on.</Text>
+                    <Space size={[8, 8]} wrap>
+                      <Tag color="red">Absent / unpaid leave</Tag>
+                      <Text type="secondary">→</Text>
+                      <Tag color="orange">Weekly off / holiday</Tag>
+                      <Text type="secondary">→</Text>
+                      <Tag color="red">Absent / unpaid leave</Tag>
+                    </Space>
+                    <Text type="secondary">Both surrounding days must be known by the payslip date and fall within the same calendar year. The table shows salaries with and without this rule.</Text>
+                  </Flex>
+                </Card>
+              </Flex>
+            ),
+          },
+        ]}
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
@@ -298,7 +411,7 @@ const SalarySlip = () => {
               Generated Salary Slips
             </Text>
             <Tag color="blue" style={{ margin: 0 }}>
-              {selectedMonth.format('MMMM YYYY')}
+              {data ? dayjs().year(data.period.year).month(data.period.month - 1).format('MMMM YYYY') : selectedMonth.format('MMMM YYYY')}
             </Tag>
           </Flex>
         }
@@ -319,7 +432,7 @@ const SalarySlip = () => {
             showRecordId={false}
             rowKey={(record) => record.employee._id}
             columns={columns}
-            dataSource={data?.payslips ?? []}
+            dataSource={displayedPayslips}
             loading={loading}
             pagination={{ pageSize: 10 }}
             scroll={{ x: 'max-content' }}
@@ -331,9 +444,9 @@ const SalarySlip = () => {
       <Drawer
         title={selectedPayslip?.employee.name || 'Salary Slip'}
         placement="right"
-        width="min(560px, 100vw)"
+        width="min(900px, 100vw)"
         className="salary-slip-drawer"
-        onClose={() => setSelectedPayslip(null)}
+        onClose={() => setSelectedEmployeeId(null)}
         open={Boolean(selectedPayslip)}
       >
         {selectedPayslip ? (
@@ -391,8 +504,22 @@ const SalarySlip = () => {
               </Col>
             </Row>
 
+            <Card bordered={false} title="Sandwich comparison">
+              {selectedPayslip.comparison ? (
+                <Space direction="vertical" style={{ display: 'flex' }}>
+                  <Flex justify="space-between"><Text>Without sandwich</Text><Text>{currency(selectedPayslip.comparison.withoutSandwich.salary.netSalary)}</Text></Flex>
+                  <Flex justify="space-between"><Text>With sandwich ({selectedPayslip.summary.sandwichDays ?? 0} days)</Text><Text>{currency(selectedPayslip.comparison.withSandwich.salary.netSalary)}</Text></Flex>
+                  <Text type="secondary">Selected: {sandwich ? 'with sandwich' : 'without sandwich'}</Text>
+                </Space>
+              ) : <Text type="secondary">Comparison is unavailable from the server.</Text>}
+            </Card>
+
             <Card bordered={false} title="Attendance Summary">
               <Space size={[8, 8]} wrap>
+                {selectedPayslip.period.through && <Tag>Through {selectedPayslip.period.through}</Tag>}
+                {selectedPayslip.summary.daysElapsed != null && <Tag>Days {selectedPayslip.summary.daysElapsed}</Tag>}
+                {selectedPayslip.summary.weeklyOffs != null && <Tag>Weekly Offs {selectedPayslip.summary.weeklyOffs}</Tag>}
+                {selectedPayslip.summary.holidays != null && <Tag>Holidays {selectedPayslip.summary.holidays}</Tag>}
                 <Tag color="green">
                   Present {selectedPayslip.summary.presentDays}
                 </Tag>
@@ -406,6 +533,26 @@ const SalarySlip = () => {
                   Unpaid Leaves {selectedPayslip.summary.unpaidLeaves}
                 </Tag>
               </Space>
+            </Card>
+
+            <Card bordered={false} title="Day-wise attendance">
+              <Text type="secondary">Estimated hours use shift end when checkout is missing. Pending sandwich days need the next day’s status.</Text>
+              <Table<DailyPayroll>
+                rowKey="date"
+                dataSource={selectedPayslip.dailyBreakdown ?? []}
+                locale={{ emptyText: 'Day-wise details are unavailable. Refresh after updating the server.' }}
+                pagination={false}
+                scroll={{ x: 740 }}
+                size="small"
+                columns={[
+                  { title: 'Date', dataIndex: 'date', render: (date: string) => dayjs(date).format('DD MMM, ddd') },
+                  { title: 'Status', dataIndex: 'status', render: (status: DailyPayroll['status']) => dailyStatus[status] ?? status },
+                  { title: 'Check in', dataIndex: 'checkIn', render: displayTime },
+                  { title: 'Check out', dataIndex: 'checkOut', render: displayTime },
+                  { title: 'Work', key: 'work', render: (_, row) => row.workMinutes == null ? '—' : <>{decimal(row.workMinutes / 60)} hrs {row.checkoutEstimated && <Tag>Estimated</Tag>}</> },
+                  { title: 'Sandwich', key: 'sandwich', render: (_, row) => row.sandwich === 'eligible' ? <Tag color={sandwich ? 'red' : 'orange'}>{sandwich ? 'Applied' : 'Eligible'}</Tag> : row.sandwich === 'pending' ? <Tag>Pending</Tag> : '—' },
+                ]}
+              />
             </Card>
 
             <Card bordered={false} title="Salary Breakdown">
