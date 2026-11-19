@@ -157,6 +157,13 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized - Token expired
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // A request started in a previous staff session must not log out the
+      // restored admin if its response arrives after switching accounts.
+      const requestAuthorization = originalRequest.headers?.Authorization;
+      const currentToken = tokenStorage.getAccessToken();
+      if (requestAuthorization && currentToken && requestAuthorization !== `Bearer ${currentToken}`) {
+        return Promise.reject(error);
+      }
       originalRequest._retry = true;
       if (tokenStorage.getStaffSession()) {
         tokenStorage.endStaffSession();

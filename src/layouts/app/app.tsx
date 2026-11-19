@@ -62,7 +62,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
   const floatBtnRef = useRef(null);
-  const { logout, user } = useAuth();
+  const { logout, user, updateUser } = useAuth();
   const staffSession = tokenStorage.getStaffSession();
   const [switchOpen, setSwitchOpen] = useState(false);
   const [staffLoading, setStaffLoading] = useState(false);
@@ -111,7 +111,14 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
     catch { message.warning('Session could not be ended on the server; it will expire automatically.'); }
     finally {
       tokenStorage.endStaffSession();
-      window.location.assign('/');
+      const adminUser = tokenStorage.getUser();
+      if (adminUser && tokenStorage.getAccessToken()) {
+        updateUser(adminUser);
+        setEndingStaffSession(false);
+        navigate('/dashboards/default', { replace: true });
+      } else {
+        window.location.assign(PATH_AUTH.signin);
+      }
     }
   };
   const page = getPageMeta(location.pathname);
