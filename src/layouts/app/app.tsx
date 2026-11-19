@@ -98,7 +98,8 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
       const response = await apiRequest.post<any>('/auth/staff-session', { staffId });
       if (!response?.data?.token || !response?.data?.user) throw new Error('Invalid staff session');
       tokenStorage.startStaffSession(response.data.token, response.data.user);
-      window.location.assign('/');
+      window.history.replaceState(null, '', '/dashboards/default');
+      window.location.reload();
     } catch {
       message.error('Unable to log in as staff');
       setSwitchLoading(false);

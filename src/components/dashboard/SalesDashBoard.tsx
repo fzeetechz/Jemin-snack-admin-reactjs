@@ -3,7 +3,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { Card } from 'src/components';
 import {
-  Col, Row, Tag, Typography, Drawer, Flex,
+  Alert, Col, Row, Tag, Typography, Drawer, Flex, Spin,
   DatePicker, Slider, Button, Badge, Avatar, Timeline,
 } from 'antd';
 import CountUp from 'react-countup';
@@ -54,15 +54,6 @@ const CALL_SUMMARY_ROWS = (stats: any) => [
   { label: 'Avg Duration',   value: fmtDuration(stats?.calls?.avgDuration   || 0), icon: Timer,      color: '#10b981', bg: '#ecfdf5' },
 ];
 
-const MOCK_TREND = [
-  { month: 'Jan', leads: 12, calls: 30 },
-  { month: 'Feb', leads: 19, calls: 42 },
-  { month: 'Mar', leads: 15, calls: 38 },
-  { month: 'Apr', leads: 27, calls: 55 },
-  { month: 'May', leads: 22, calls: 48 },
-  { month: 'Jun', leads: 34, calls: 70 },
-];
-
 const LEAD_STATUS_COLORS: Record<string, string> = {
   New: '#0ea5e9', Contacted: '#10b981', Qualified: '#8b5cf6', Lost: '#ef4444', Converted: '#06b6d4',
 };
@@ -99,14 +90,21 @@ const stagger: Variants = {
 const SalesDashBoard = () => {
   const { canDelete }         = usePermissions();
   const { getDashboardStats } = dashboaradService();
-  const { isAdmin }           = useAuth();
+  const { isAdmin, user }     = useAuth();
   const navigate              = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const [stats, setStats]     = useState<any>(null);
+  const [statsError, setStatsError] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    getDashboardStats().then((res: any) => setStats(res.data));
-  }, []);
+    let active = true;
+    setStats(null);
+    setStatsError(false);
+    getDashboardStats().then((res: any) => { if (active) setStats(res.data); })
+      .catch(() => { if (active) setStatsError(true); });
+    return () => { active = false; };
+  }, [(user as any)?._id, reload]);
 
   const goto = (link: string) => navigate(link);
 
@@ -121,7 +119,7 @@ const SalesDashBoard = () => {
 
   const visibleKpis = KPI_CONFIG.filter((k) => !k.adminOnly || isAdmin);
 
-  const trendRaw: any[] = stats?.trend || MOCK_TREND;
+  const trendRaw: any[] = stats?.trend || [];
   const trendData = trendRaw.flatMap((d: any) => [
     { month: d.month, value: d.leads, type: 'Leads' },
     { month: d.month, value: d.calls, type: 'Calls' },
@@ -141,6 +139,9 @@ const SalesDashBoard = () => {
   const priorityLeads: any[] = stats?.leads?.priorityLeads || stats?.priorityLeads || [];
   const recentActivities: any[] = stats?.recentActivities || [];
   const bySource: any[] = stats?.leads?.bySource || [];
+
+  if (statsError) return <Alert type="error" showIcon message="Dashboard data could not be loaded" action={<Button onClick={() => setReload(value => value + 1)}>Retry</Button>} />;
+  if (!stats) return <Spin tip="Loading dashboard"><div style={{ minHeight: 160 }} /></Spin>;
 
   return (
     <div className="sales-dashboard">
@@ -190,14 +191,14 @@ const SalesDashBoard = () => {
                 </Flex>
               }
             >
-              <Area
+              {trendData.length ? <Area
                 data={trendData}
                 xField="month" yField="value" seriesField="type"
                 height={220} smooth
                 areaStyle={{ fillOpacity: 0.18 }}
                 color={['#0ea5e9', '#8b5cf6']}
                 legend={{ position: 'top-right' }}
-              />
+              /> : <Text type="secondary">Trend data is not available.</Text>}
             </Card>
           </motion.div>
         </Col>

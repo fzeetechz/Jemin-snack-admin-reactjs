@@ -136,7 +136,8 @@ const StaffPage = () => {
       const response = await apiRequest.post<any>('/auth/staff-session', { staffId: staff._id });
       if (!response?.data?.token || !response?.data?.user) throw new Error('Invalid staff session response');
       tokenStorage.startStaffSession(response.data.token, response.data.user);
-      window.location.assign('/');
+      window.history.replaceState(null, '', '/dashboards/default');
+      window.location.reload();
     } catch {
       message.error('Unable to start staff session');
       setSwitchingId(null);

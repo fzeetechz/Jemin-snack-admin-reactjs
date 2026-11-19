@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { authService } from '../services/auth/authService';
 import { tokenStorage } from '../services/auth/tokenStorage';
+import { isAdminUser } from '../config/permissions';
 import {
   LoginDto,
   RegisterDto,
@@ -44,7 +45,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfileDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setisAdmin] = useState(false);
+  const isAdmin = isAdminUser(user);
 
   // Initialize auth state from storage on mount
   useEffect(() => {
@@ -59,9 +60,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             tokenStorage.clearAuth();
             setUser(null);
           } else {
-            if (storedUser?.roleId.name === 'super admin') {
-              setisAdmin(true);
-            }
             console.log(storedUser);
             setUser(storedUser);
           }
