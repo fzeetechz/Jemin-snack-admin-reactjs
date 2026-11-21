@@ -25,9 +25,11 @@ import {
   ArrowLeft,
   ShieldAlert,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Map from 'src/components/Map';
+import LoginHistory from 'src/components/LoginHistory';
+import AttendanceHistory from 'src/components/AttendanceHistory';
 import type { StayPoint, FocusedPosition, LocationData } from 'src/components/Map';
 import apiClient from 'src/services/api/apiClient';
 import { API_ENDPOINTS } from 'src/services/api/endpoints';
@@ -146,6 +148,15 @@ const fmtTime = (iso: string) => {
 const Location = () => {
   const { canDelete } = usePermissions();
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<User | null>(null);
+  const [staffPage, setStaffPage] = useState(1);
+  const [staffLimit, setStaffLimit] = useState(20);
+  const [staffTotal, setStaffTotal] = useState(0);
+  const [roleNames, setRoleNames] = useState<string[]>([]);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffFilters, setStaffFilters] = useState<Record<string, string>>({});
+  const [staffLoading, setStaffLoading] = useState(false);
+  const requestId = useRef(0);
   const [deviceMap, setDeviceMap] = useState<Record<string, DeviceTelemetry>>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [locationData, setLocationData] = useState<LocationData | null>(null);
@@ -154,7 +165,7 @@ const Location = () => {
   const [loading, setLoading] = useState(false);
   const [focusedPosition, setFocusedPosition] = useState<FocusedPosition | null>(null);
   const [selectedStayIndex, setSelectedStayIndex] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'stops' | 'device' | 'logs'>('stops');
+  const [activeTab, setActiveTab] = useState<'stops' | 'device' | 'logs' | 'sessions' | 'attendance'>('stops');
 
   const userId = searchParams.get('userId');
 
@@ -166,16 +177,20 @@ const Location = () => {
 
   const { getStaff } = staffService();
 
-  // Load all staff list and all device telemetry
+  // Load the requested staff page and device telemetry
   const loadStaffAndDevices = useCallback(async () => {
+    const request = ++requestId.current;
+    setStaffLoading(true);
     try {
       const [staffRes, deviceRes] = await Promise.allSettled([
-        getStaff(),
+        getStaff({ page: staffPage, limit: staffLimit, search: staffSearch, ...staffFilters }),
         apiClient.get(API_ENDPOINTS.DEVICE.LIST),
       ]);
 
+      if (request !== requestId.current) return;
       if (staffRes.status === 'fulfilled' && (staffRes.value as any)?.success) {
         setUsers(((staffRes.value as any).data.items ?? []).map(normalizeUser));
+        setStaffTotal((staffRes.value as any).data.pagination?.total ?? 0);
       }
 
       if (deviceRes.status === 'fulfilled' && deviceRes.value?.data?.success) {
@@ -192,12 +207,22 @@ const Location = () => {
       }
     } catch (e) {
       console.error('Error fetching staff and device statuses:', e);
+    } finally {
+      if (request === requestId.current) setStaffLoading(false);
     }
-  }, []);
+  }, [staffPage, staffLimit, staffSearch, staffFilters]);
 
   useEffect(() => {
     loadStaffAndDevices();
   }, [loadStaffAndDevices]);
+
+  useEffect(() => {
+    apiClient.get(API_ENDPOINTS.ROLES.LIST(undefined)).then((response) => {
+      if (Array.isArray(response.data?.data)) {
+        setRoleNames(response.data.data.map((role: { name: string }) => role.name));
+      }
+    }).catch(() => {});
+  }, []);
 
   // Fetch location history and device status for selected staff member
   const getUserLocationAndDevice = useCallback(async () => {
@@ -210,7 +235,9 @@ const Location = () => {
         apiClient.get(
           `${API_ENDPOINTS.LOCATION.GET}?userId=${userId}&date=${date}&responseType=simple`
         ),
-        apiClient.get(API_ENDPOINTS.DEVICE.STATUS(userId)),
+        apiClient.get(API_ENDPOINTS.DEVICE.STATUS(userId), {
+          params: { date, start: selectedDate.startOf('day').toISOString(), end: selectedDate.add(1, 'day').startOf('day').toISOString() },
+        }),
       ]);
 
       if (locRes.status === 'fulfilled' && locRes.value?.data?.success) {
@@ -239,10 +266,21 @@ const Location = () => {
     }
   }, [userId, selectedDate, getUserLocationAndDevice]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setSelectedStaff(null);
+    if (userId) {
+      apiClient.get(API_ENDPOINTS.STAFF.GET(userId)).then((response) => {
+        if (!cancelled && response.data?.success) setSelectedStaff(normalizeUser(response.data.data));
+      }).catch(() => { if (!cancelled) setSelectedStaff(null); });
+    }
+    return () => { cancelled = true; };
+  }, [userId]);
+
   // Active staff object
   const activeStaff = useMemo(() => {
-    return users.find((u) => u._id === userId) || null;
-  }, [users, userId]);
+    return users.find((u) => u._id === userId) || selectedStaff;
+  }, [users, userId, selectedStaff]);
 
   // Handle clicking a stoppage from the timeline
   const handleSelectStay = (stay: StayPoint, index: number) => {
@@ -400,7 +438,9 @@ const Location = () => {
 
   const stays = locationData?.stays ?? [];
   const summary = locationData?.summary;
-  const recentLogs = deviceStatus?.recentLogs ?? [];
+  const recentLogs = (deviceStatus?.recentLogs ?? []).filter((log) =>
+    dayjs(log.timestamp).isSame(selectedDate, 'day')
+  );
 
   return (
     <div className="module-page" style={{ padding: '4px 0' }}>
@@ -692,6 +732,16 @@ const Location = () => {
                     activeKey={activeTab}
                     onChange={(k) => setActiveTab(k as any)}
                     items={[
+                      {
+                        key: 'sessions',
+                        label: 'Login / Logout',
+                        children: <LoginHistory key={userId} userId={userId} />,
+                      },
+                      {
+                        key: 'attendance',
+                        label: 'Clock In / Out',
+                        children: <AttendanceHistory key={userId} userId={userId} />,
+                      },
                       {
                         key: 'stops',
                         label: (
@@ -1038,13 +1088,13 @@ const Location = () => {
                         children: (
                           <div>
                             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                              Security audit events reported by the staff device:
+                              Security audit events reported by the staff device on {selectedDate.format('DD MMM YYYY')}:
                             </div>
 
                             {recentLogs.length === 0 ? (
                               <Empty
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="No security or tamper events recorded."
+                                description="No available security or tamper events for this date."
                                 style={{ margin: '36px 0' }}
                               />
                             ) : (
@@ -1079,7 +1129,7 @@ const Location = () => {
                                           {log.event}
                                         </Tag>
                                         <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                                          {log.timestamp ? dayjs(log.timestamp).format('hh:mm:ss A') : ''}
+                                          {log.timestamp ? dayjs(log.timestamp).format('DD MMM YYYY, hh:mm:ss A') : ''}
                                         </span>
                                       </div>
                                       <div style={{ color: '#334155', marginTop: 4, fontWeight: 500 }}>
@@ -1109,12 +1159,30 @@ const Location = () => {
             }}
             listingTitle="Staff Field Tracking & Device Health"
             onRefresh={loadStaffAndDevices}
-            fields={LISTING_FIELDS.staff}
+            fields={LISTING_FIELDS.staff.map((field) =>
+              field.key === 'roleId' && roleNames.length ? { ...field, options: roleNames } :
+              field.key === 'status' ? { ...field, options: ['active', 'inactive'] } : field
+            )}
             filterKeys={['status', 'roleId']}
             rowKey={(record) => record._id}
             columns={columns}
             dataSource={users}
-            pagination={{ pageSize: 10 }}
+            serverSide
+            loading={staffLoading}
+            onFiltersChange={(search, filters) => {
+              setStaffSearch(search);
+              setStaffFilters(filters);
+              setStaffPage(1);
+            }}
+            pagination={{
+              current: staffPage,
+              pageSize: staffLimit,
+              total: staffTotal,
+              onChange: (page, size) => {
+                setStaffPage(size !== staffLimit ? 1 : page);
+                setStaffLimit(size);
+              },
+            }}
             rowHoverable={false}
           />
         )}

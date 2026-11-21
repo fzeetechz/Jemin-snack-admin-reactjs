@@ -188,7 +188,7 @@ export default function ListingTable<T extends object>({
       fixed: 'left' as const,
       render: (_: unknown, __: T, index: number) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {(page - 1) * pageSize + index + 1}
+          {((serverSide && pagination && typeof pagination === 'object' ? pagination.current ?? 1 : page) - 1) * (serverSide && pagination && typeof pagination === 'object' ? pagination.pageSize ?? 10 : pageSize) + index + 1}
         </Typography.Text>
       ),
     },
