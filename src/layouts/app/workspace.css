@@ -51,10 +51,10 @@
   display: block;
   padding-left: 46px;
   margin-top: 4px;
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: #b42014;
+  color: #ff9b91;
   text-transform: uppercase;
 }
 
@@ -68,7 +68,7 @@
   border-radius: 12px;
   padding: 10px 12px;
   background: rgba(255,255,255,0.03);
-  color: #6b8099;
+  color: #bac8da;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
@@ -89,7 +89,7 @@
 }
 .sidebar-workspace div > span {
   font-size: 10px;
-  color: #5a7490;
+  color: #a9bad0;
 }
 .sidebar-workspace-icon {
   display: grid;
@@ -108,22 +108,23 @@
   flex: 1;
   min-height: 0;
   padding: 4px 10px 20px;
-  scrollbar-color: #1e2d3d transparent;
+  scrollbar-color: #60748e transparent;
   scrollbar-width: thin;
 }
 .workspace-sidebar .ant-menu-item-group-title {
   padding: 18px 12px 6px;
   text-transform: uppercase;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.2px;
   font-weight: 700;
-  font-size: 9.5px !important;
-  color: #2d4259 !important;
+  font-size: 11px !important;
+  color: #9eafc5 !important;
 }
 .workspace-sidebar .ant-menu-item,
 .workspace-sidebar .ant-menu-submenu-title {
   width: auto;
   margin-inline: 0;
   border-radius: 10px !important;
+  font-weight: 500;
 }
 .workspace-sidebar .ant-menu-item-selected {
   font-weight: 600;
@@ -135,8 +136,17 @@
   left: 0; top: 50%;
   transform: translateY(-50%);
   width: 3px; height: 60%;
-  background: #ff6b5b;
+  background: #ffd2cc;
   border-radius: 0 3px 3px 0;
+}
+.workspace-sidebar .ant-menu-item:focus-visible,
+.workspace-sidebar .ant-menu-submenu-title:focus-visible {
+  outline: 2px solid #ff9b91;
+  outline-offset: -2px;
+}
+.workspace-sidebar .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #ffffff;
+  font-weight: 600;
 }
 .workspace-sidebar .ant-menu-sub.ant-menu-inline {
   background: rgba(255,255,255,0.02);
@@ -155,7 +165,7 @@
   vertical-align: middle;
 }
 .workspace-sidebar .ant-menu-submenu-arrow {
-  color: #2d4259;
+  color: inherit;
 }
 .workspace-sidebar .ant-menu-title-content {
   margin-inline-start: 10px;
@@ -181,14 +191,14 @@
 }
 .sidebar-footer strong {
   display: block;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
-  color: #8fa3bc;
+  color: #d5dfec;
   letter-spacing: -0.1px;
 }
 .sidebar-footer div > span {
-  font-size: 9px;
-  color: #3d5166;
+  font-size: 11px;
+  color: #a9bad0;
 }
 /* ==========================================
    HEADER
@@ -1141,4 +1151,18 @@
   .dashboard-intro { min-height: 148px; padding: 24px 22px; border-radius: 20px; }
   .dashboard-intro h2.ant-typography { font-size: 27px; }
   .dashboard-intro-icon { width: 48px; height: 48px; border-radius: 15px; }
+}
+
+/* A single compact heading for listings with their own title and summary. */
+.listing-toolbar.listing-toolbar-compact {
+  padding: 0 0 14px;
+  margin-bottom: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  gap: 12px 20px;
+}
+.listing-toolbar-compact .listing-toolbar-actions {
+  width: auto;
+  flex: 0 1 auto;
 }

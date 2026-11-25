@@ -1,8 +1,4 @@
-import {
-  PencilLine as EditOutlined,
-  Eye as EyeOutlined,
-  RefreshCw as ReloadOutlined,
-} from 'lucide-react';
+import { PencilLine as EditOutlined, Eye as EyeOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -21,7 +17,6 @@ import {
   Row,
   Select,
   Space,
-  Spin,
   Tag,
   TimePicker,
   Typography,
@@ -204,6 +199,7 @@ const Attendance = () => {
   const [searchText, setSearchText] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [designationFilter, setDesignationFilter] = useState<string>();
   const [datePreset, setDatePreset] = useState<'today' | 'month' | 'custom'>(
     'today'
   );
@@ -313,9 +309,13 @@ const Attendance = () => {
       const matchesDepartment =
         departmentFilter === 'All' || record.department === departmentFilter;
 
-      return matchesSearch && matchesDepartment;
+      return (
+        matchesSearch &&
+        matchesDepartment &&
+        (!designationFilter || record.designation === designationFilter)
+      );
     });
-  }, [records, searchText, departmentFilter]);
+  }, [records, searchText, departmentFilter, designationFilter]);
 
   const summary = useMemo(() => {
     const total = filteredRecords.length;
@@ -636,138 +636,145 @@ const Attendance = () => {
         minHeight: '100%',
       }}
     >
-      <Space
-        direction="vertical"
-        size={16}
-        style={{ display: 'flex', width: '100%' }}
-      >
-        <Card bordered={false}>
-          <Flex vertical gap={16}>
-            <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
-              <div>
-                <Title level={4} style={{ margin: 0 }}>
-                  Attendance Register
-                </Title>
-                <Text type="secondary">
-                  {filteredRecords.length} records visible
-                </Text>
-              </div>
-              <Space wrap>
-                <Button
-                  type={datePreset === 'today' ? 'primary' : 'default'}
-                  onClick={applyTodayFilter}
-                >
-                  Today
-                </Button>
-                <Button
-                  type={datePreset === 'month' ? 'primary' : 'default'}
-                  onClick={applyMonthFilter}
-                >
-                  This Month
-                </Button>
-                <Button icon={<CalendarOutlined />} onClick={handleExport}>
-                  Export
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={fetchAttendance}>
-                  Refresh
-                </Button>
-              </Space>
+      <Card bordered={false} styles={{ body: { padding: 16 } }}>
+        <ListingTable
+          trashConfig={{
+            canDelete: canDelete('attendance'),
+            modelType: 'attendance',
+            onComplete: fetchAttendance,
+            getId: (row) => row.id,
+          }}
+          listingTitle="Attendance"
+          toolbarHeader={
+            <Flex align="center" gap={10} wrap>
+              <Title level={4} style={{ margin: 0, fontSize: 18 }}>
+                Attendance Register
+              </Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {filteredRecords.length.toLocaleString('en-IN')} records
+              </Text>
             </Flex>
-
-            <Row gutter={[12, 12]}>
-              {/* <Col xs={24} sm={12} lg={6}>
-                                <Card size="small" bordered={false} style={{ background: '#fafafa' }}>
-                                    <Text type="secondary">Attendance Rate</Text>
-                                    <div style={{ marginTop: 8 }}>
-                                        <Text strong style={{ fontSize: 22 }}>
-                                            {summary.rate}%
-                                        </Text>
-                                    </div>
-                                    <Progress
-                                        percent={summary.rate}
-                                        showInfo={false}
-                                        strokeColor="#52c41a"
-                                        style={{ marginTop: 10, marginBottom: 0 }}
-                                    />
-                                </Card>
-                            </Col> */}
-              <Col xs={24} sm={12} lg={6}>
-                <Card
-                  size="small"
-                  bordered={false}
-                  style={{ background: '#fafafa' }}
-                >
-                  <Text type="secondary">Present / Late</Text>
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong style={{ fontSize: 22 }}>
-                      {summary.presentCount}
-                    </Text>
-                  </div>
-                </Card>
-              </Col>
-              {/* <Col xs={24} sm={12} lg={6}>
-                                <Card size="small" bordered={false} style={{ background: '#fafafa' }}>
-                                    <Text type="secondary">Absentees</Text>
-                                    <div style={{ marginTop: 8 }}>
-                                        <Text strong style={{ fontSize: 22 }}>
-                                            {summary.absentCount}
-                                        </Text>
-                                    </div>
-                                </Card>
-                            </Col> */}
-              <Col xs={24} sm={12} lg={6}>
-                <Card
-                  size="small"
-                  bordered={false}
-                  style={{ background: '#fafafa' }}
-                >
-                  <Text type="secondary">Leave / Half Day</Text>
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong style={{ fontSize: 22 }}>
-                      {summary.leaveCount + summary.halfDayCount}
-                    </Text>
-                  </div>
-                </Card>
-              </Col>
-            </Row>
-
-            <Row gutter={[12, 12]}>
-              <Col xs={24} md={8}>
-                <Input.Search
-                  allowClear
-                  placeholder="Search by employee, code, or designation"
-                  value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
-                />
-              </Col>
-              <Col xs={24} md={5}>
+          }
+          toolbarSummary={
+            <Flex gap={8} wrap>
+              <Tag
+                color="green"
+                variant="filled"
+                style={{ margin: 0, borderRadius: 6 }}
+              >
+                Present / Late{' '}
+                <strong style={{ marginLeft: 8 }}>
+                  {summary.presentCount}
+                </strong>
+              </Tag>
+              <Tag
+                color="gold"
+                variant="filled"
+                style={{ margin: 0, borderRadius: 6 }}
+              >
+                Leave / Half Day{' '}
+                <strong style={{ marginLeft: 8 }}>
+                  {summary.leaveCount + summary.halfDayCount}
+                </strong>
+              </Tag>
+            </Flex>
+          }
+          toolbarActions={
+            <Button icon={<CalendarOutlined />} onClick={handleExport}>
+              Export CSV
+            </Button>
+          }
+          onRefresh={fetchAttendance}
+          loading={loading}
+          showRecordId={false}
+          fields={LISTING_FIELDS.attendance}
+          activeFilterCount={
+            Number(Boolean(searchText.trim())) +
+            Number(departmentFilter !== 'All') +
+            Number(statusFilter !== 'All') +
+            Number(Boolean(designationFilter)) +
+            Number(Boolean(dateRange?.[0] || dateRange?.[1]))
+          }
+          onClearFilters={() => {
+            setSearchText('');
+            setDepartmentFilter('All');
+            setStatusFilter('All');
+            setDesignationFilter(undefined);
+            setDateRange(null);
+            setDatePreset('custom');
+          }}
+          filterContent={
+            <>
+              <Input
+                allowClear
+                aria-label="Search attendance"
+                placeholder="Search employee, code, or designation"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+              />
+              <Flex vertical gap={6}>
+                <Text strong>Department</Text>
                 <Select
-                  style={{ width: '100%' }}
+                  aria-label="Filter department"
                   value={departmentFilter}
                   onChange={setDepartmentFilter}
-                  options={departments.map((department) => ({
-                    label: department,
-                    value: department,
+                  options={departments.map((value) => ({
+                    label: value,
+                    value,
                   }))}
+                  showSearch
+                  optionFilterProp="label"
                 />
-              </Col>
-              <Col xs={24} md={5}>
+              </Flex>
+              <Flex vertical gap={6}>
+                <Text strong>Status</Text>
                 <Select
-                  style={{ width: '100%' }}
+                  aria-label="Filter status"
                   value={statusFilter}
                   onChange={setStatusFilter}
                   options={[
                     { label: 'All', value: 'All' },
-                    { label: 'Present', value: 'present' },
-                    { label: 'Late', value: 'late' },
-                    { label: 'Half Day', value: 'half_day' },
-                    { label: 'Absent', value: 'absent' },
-                    { label: 'On Leave', value: 'leave' },
+                    ...Object.entries(statusConfig).map(
+                      ([value, { label }]) => ({ value, label })
+                    ),
                   ]}
                 />
-              </Col>
-              <Col xs={24} md={6}>
+              </Flex>
+              <Flex vertical gap={6}>
+                <Text strong>Designation</Text>
+                <Select
+                  aria-label="Filter designation"
+                  placeholder="All designations"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  value={designationFilter}
+                  onChange={setDesignationFilter}
+                  options={[
+                    ...new Set(records.map((record) => record.designation)),
+                  ]
+                    .sort()
+                    .map((value) => ({ value, label: value }))}
+                />
+              </Flex>
+              <Flex vertical gap={8}>
+                <Text strong>Date range</Text>
+                <Space wrap>
+                  <Button
+                    type={datePreset === 'today' ? 'primary' : 'default'}
+                    onClick={applyTodayFilter}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    type={datePreset === 'month' ? 'primary' : 'default'}
+                    onClick={applyMonthFilter}
+                  >
+                    This Month
+                  </Button>
+                </Space>
                 <RangePicker
+                  aria-label="Filter attendance date range"
                   style={{ width: '100%' }}
                   value={dateRange}
                   onChange={(value) => {
@@ -775,35 +782,18 @@ const Attendance = () => {
                     setDateRange(value);
                   }}
                 />
-              </Col>
-            </Row>
-          </Flex>
-        </Card>
-
-        <Card bordered={false}>
-          <Spin spinning={loading}>
-            <ListingTable
-              trashConfig={{
-                canDelete: canDelete('attendance'),
-                modelType: 'attendance',
-                onComplete: fetchAttendance,
-                getId: (row) => row.id,
-              }}
-              listingTitle="Attendance"
-              showRecordId={false}
-              fields={LISTING_FIELDS.attendance}
-              filterKeys={['status', 'department', 'designation']}
-              rowKey="id"
-              columns={columns}
-              dataSource={filteredRecords}
-              size="small"
-              pagination={{ pageSize: 14 }}
-              scroll={{ x: 1550 }}
-              rowHoverable={false}
-            />
-          </Spin>
-        </Card>
-      </Space>
+              </Flex>
+            </>
+          }
+          rowKey="id"
+          columns={columns}
+          dataSource={filteredRecords}
+          size="small"
+          pagination={{ pageSize: 14 }}
+          scroll={{ x: 1550 }}
+          rowHoverable={false}
+        />
+      </Card>
 
       <Modal
         title="Attendance Details"

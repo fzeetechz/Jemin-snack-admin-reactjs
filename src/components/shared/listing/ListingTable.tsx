@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   Descriptions,
@@ -11,6 +12,7 @@ import {
   Input,
   DatePicker,
   Modal,
+  Popover,
   Select,
   Space,
   Table,
@@ -48,7 +50,10 @@ const detailLabel = (key: string) =>
 
 const isInternalDetailKey = (key: string) => {
   const leafKey = key.split('.').pop()?.toLowerCase() ?? key.toLowerCase();
-  return ['id', '_id', '__v', 'responsekeys'].includes(leafKey) || leafKey.endsWith('id');
+  return (
+    ['id', '_id', '__v', 'responsekeys'].includes(leafKey) ||
+    leafKey.endsWith('id')
+  );
 };
 
 const hasDetailValue = (value: unknown): boolean =>
@@ -60,7 +65,13 @@ const renderReadableDetail = (value: unknown): ReactNode => {
   if (Array.isArray(value)) {
     if (!value.length) return '�';
     if (value.every((item) => item === null || typeof item !== 'object')) {
-      return <Space wrap>{value.map((item, index) => <Tag key={index}>{String(item)}</Tag>)}</Space>;
+      return (
+        <Space wrap>
+          {value.map((item, index) => (
+            <Tag key={index}>{String(item)}</Tag>
+          ))}
+        </Space>
+      );
     }
     return (
       <Space direction="vertical" size={8} style={{ width: '100%' }}>
@@ -74,13 +85,19 @@ const renderReadableDetail = (value: unknown): ReactNode => {
   }
   if (typeof value === 'object') {
     const items = Object.entries(value as Record<string, unknown>)
-      .filter(([key, item]) => !isInternalDetailKey(key) && hasDetailValue(item))
+      .filter(
+        ([key, item]) => !isInternalDetailKey(key) && hasDetailValue(item)
+      )
       .map(([key, item]) => ({
         key,
         label: detailLabel(key),
         children: renderReadableDetail(item),
       }));
-    return items.length ? <Descriptions size="small" column={1} items={items} /> : '�';
+    return items.length ? (
+      <Descriptions size="small" column={1} items={items} />
+    ) : (
+      '�'
+    );
   }
   return String(value);
 };
@@ -101,6 +118,12 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
         recordName?: (row: T) => string | undefined;
       }
     | false;
+  toolbarHeader?: ReactNode;
+  toolbarSummary?: ReactNode;
+  toolbarActions?: ReactNode;
+  filterContent?: ReactNode;
+  activeFilterCount?: number;
+  onClearFilters?: () => void;
   listingTitle: string;
   showRecordId?: boolean;
   searchPlaceholder?: string;
@@ -118,6 +141,12 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
 
 export default function ListingTable<T extends object>({
   trashConfig,
+  toolbarHeader,
+  toolbarSummary,
+  toolbarActions,
+  filterContent,
+  activeFilterCount = 0,
+  onClearFilters,
   listingTitle,
   showRecordId = true,
   searchPlaceholder,
@@ -137,6 +166,7 @@ export default function ListingTable<T extends object>({
   onChange,
   ...props
 }: ListingTableProps<T>) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
@@ -465,101 +495,198 @@ export default function ListingTable<T extends object>({
     );
     XLSX.writeFile(workbook, 'import-errors.xlsx');
   };
+  const filterCount =
+    activeFilterCount +
+    Number(Boolean(search.trim())) +
+    Object.entries(filters).filter(
+      ([key, value]) =>
+        Boolean(value) && key !== '__dateField' && key !== '__dateTo'
+    ).length;
   const paginationOptions =
     pagination && typeof pagination === 'object' ? pagination : {};
+  const filterControls = (
+    <Flex align="center" gap={10}>
+      <Popover
+        trigger="click"
+        placement="bottomLeft"
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        content={
+          <Flex
+            vertical
+            gap={16}
+            style={{ width: 'min(340px, calc(100vw - 64px))' }}
+          >
+            <Flex justify="space-between" align="center" gap={12}>
+              <Typography.Text strong>Filter records</Typography.Text>
+              <Button
+                type="link"
+                size="small"
+                disabled={!filterCount}
+                onClick={() => {
+                  updateFilters('', {});
+                  onClearFilters?.();
+                }}
+              >
+                Clear all
+              </Button>
+            </Flex>
+            <div
+              style={{
+                maxHeight: 'min(480px, 60vh)',
+                overflowY: 'auto',
+                padding: 2,
+              }}
+            >
+              <Flex vertical gap={14}>
+                {filterContent ?? (
+                  <>
+                    <Input
+                      value={search}
+                      onChange={(event) =>
+                        updateFilters(event.target.value, filters)
+                      }
+                      prefix={<Search size={15} strokeWidth={1.8} />}
+                      placeholder={
+                        searchPlaceholder ??
+                        `Search ${listingTitle.toLowerCase()} or Item ID`
+                      }
+                      allowClear
+                      aria-label={`Search ${listingTitle}`}
+                      style={{ width: '100%' }}
+                    />
+                    {filterKeys.map((key) => {
+                      const field = fields.find((item) => item.key === key);
+                      const options =
+                        field?.options ??
+                        [
+                          ...new Set(
+                            dataSource
+                              .map((row) => displayValue(getValue(row, key)))
+                              .filter(Boolean)
+                          ),
+                        ].sort();
+                      return (
+                        <Flex vertical gap={6} key={key}>
+                          <Typography.Text strong>
+                            {field?.label ?? key}
+                          </Typography.Text>
+                          <Select
+                            value={filters[key] || undefined}
+                            options={options.map((value) => ({
+                              value,
+                              label:
+                                value === 'true'
+                                  ? 'Active'
+                                  : value === 'false'
+                                    ? 'Inactive'
+                                    : value,
+                            }))}
+                            placeholder={field?.label ?? key}
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            aria-label={`Filter ${field?.label ?? key}`}
+                            style={{ width: '100%' }}
+                            onChange={(value) =>
+                              updateFilters(search, {
+                                ...filters,
+                                [key]: value ?? '',
+                              })
+                            }
+                          />
+                        </Flex>
+                      );
+                    })}
+                    {dateKey && (
+                      <Flex vertical gap={6}>
+                        <Typography.Text strong>Date range</Typography.Text>
+                        <DatePicker.RangePicker
+                          style={{ width: '100%' }}
+                          aria-label="Filter date range"
+                          value={
+                            filters.__dateFrom && filters.__dateTo
+                              ? [
+                                  dayjs(filters.__dateFrom),
+                                  dayjs(filters.__dateTo),
+                                ]
+                              : null
+                          }
+                          onChange={(dates) =>
+                            updateFilters(search, {
+                              ...filters,
+                              __dateField: dateKey,
+                              __dateFrom:
+                                dates?.[0]?.format('YYYY-MM-DD') ?? '',
+                              __dateTo: dates?.[1]?.format('YYYY-MM-DD') ?? '',
+                            })
+                          }
+                        />
+                      </Flex>
+                    )}
+                  </>
+                )}
+              </Flex>
+            </div>
+            <Button type="primary" block onClick={() => setFiltersOpen(false)}>
+              Show {filtered.length.toLocaleString('en-IN')} records
+            </Button>
+          </Flex>
+        }
+      >
+        <Badge count={filterCount} size="small" offset={[-2, 2]}>
+          <Button
+            icon={<ListFilter size={18} strokeWidth={1.8} />}
+            type={filterCount ? 'primary' : 'default'}
+            aria-label={`Filters${
+              filterCount ? `, ${filterCount} active` : ''
+            }`}
+            aria-expanded={filtersOpen}
+            title="Filter records"
+          />
+        </Badge>
+      </Popover>
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        {filterCount ? `${filterCount} active` : 'Filters'}
+      </Typography.Text>
+    </Flex>
+  );
   return (
     <div className="listing-workspace">
-      <div className="listing-heading">
-        <div className="listing-heading-title">
-          <span className="listing-heading-icon">
-            <ListFilter size={17} strokeWidth={1.8} />
+      {!toolbarHeader && (
+        <div className="listing-heading">
+          <div className="listing-heading-title">
+            <span className="listing-heading-icon">
+              <ListFilter size={17} strokeWidth={1.8} />
+            </span>
+            Browse records
+          </div>
+          <span className="listing-count">
+            {serverSide ? 'Current page' : 'Matching records'}:{' '}
+            {filtered.length.toLocaleString('en-IN')}
           </span>
-          Browse records
         </div>
-        <span className="listing-count">
-          {serverSide ? 'Current page' : 'Matching records'}:{' '}
-          {filtered.length.toLocaleString('en-IN')}
-        </span>
-      </div>
+      )}
       <Flex
         wrap
         gap={12}
         align="center"
         justify="space-between"
-        className="listing-toolbar"
+        className={`listing-toolbar${
+          toolbarHeader ? ' listing-toolbar-compact' : ''
+        }`}
       >
-        <Space wrap className="listing-toolbar-filters" size={10}>
-          <Input
-            value={search}
-            onChange={(event) => updateFilters(event.target.value, filters)}
-            prefix={<Search size={15} strokeWidth={1.8} />}
-            placeholder={
-              searchPlaceholder ??
-              `Search ${listingTitle.toLowerCase()} or Item ID`
-            }
-            allowClear
-            aria-label={`Search ${listingTitle}`}
-            className="listing-search"
-          />
-          {filterKeys.map((key) => {
-            const field = fields.find((item) => item.key === key);
-            const options =
-              field?.options ??
-              [
-                ...new Set(
-                  dataSource
-                    .map((row) => displayValue(getValue(row, key)))
-                    .filter(Boolean)
-                ),
-              ].sort();
-            return (
-              <Select
-                key={key}
-                value={filters[key] || undefined}
-                options={options.map((value) => ({
-                  value,
-                  label:
-                    value === 'true'
-                      ? 'Active'
-                      : value === 'false'
-                        ? 'Inactive'
-                        : value,
-                }))}
-                placeholder={field?.label ?? key}
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                aria-label={`Filter ${field?.label ?? key}`}
-                style={{ minWidth: 150 }}
-                onChange={(value) =>
-                  updateFilters(search, { ...filters, [key]: value ?? '' })
-                }
-              />
-            );
-          })}
-          {dateKey && (
-            <DatePicker.RangePicker
-              aria-label="Filter date range"
-              value={
-                filters.__dateFrom && filters.__dateTo
-                  ? [dayjs(filters.__dateFrom), dayjs(filters.__dateTo)]
-                  : null
-              }
-              onChange={(dates) =>
-                updateFilters(search, {
-                  ...filters,
-                  __dateField: dateKey,
-                  __dateFrom: dates?.[0]?.format('YYYY-MM-DD') ?? '',
-                  __dateTo: dates?.[1]?.format('YYYY-MM-DD') ?? '',
-                })
-              }
-            />
-          )}
-          {(search || Object.values(filters).some(Boolean)) && (
-            <Button onClick={() => updateFilters('', {})}>Clear filters</Button>
-          )}
-        </Space>
+        {toolbarHeader ? (
+          <Flex vertical gap={8} style={{ minWidth: 0 }}>
+            {toolbarHeader}
+            {toolbarSummary}
+          </Flex>
+        ) : (
+          filterControls
+        )}
         <Space wrap className="listing-toolbar-actions" size={8}>
+          {toolbarHeader && filterControls}
+          {toolbarActions}
           {onRefresh && (
             <Button
               icon={<RefreshCw size={15} strokeWidth={1.8} />}
@@ -590,10 +717,16 @@ export default function ListingTable<T extends object>({
               icon={<Download size={15} strokeWidth={1.8} />}
               loading={exporting}
             >
-              Download{' '}
-              {serverSide && !loadExportRows
-                ? 'current page'
-                : 'filtered records'}
+              {toolbarHeader ? (
+                'Download'
+              ) : (
+                <>
+                  Download{' '}
+                  {serverSide && !loadExportRows
+                    ? 'current page'
+                    : 'filtered records'}
+                </>
+              )}
             </Button>
           </Dropdown>
           {showUpload && importConfig && (
