@@ -51,5 +51,5 @@ export function validateImport(rows: ImportRow[], fields: ListingField[], existi
 }
 export function filterRows<T extends object>(rows: readonly T[], search: string, filters: Record<string, string>, fields: ListingField[]): T[] {
   const query = search.trim().toLowerCase();
-  return rows.filter((row) => (!query || [getItemId(row), ...fields.map((field) => displayValue(getValue(row, field.key)))].join(' ').toLowerCase().includes(query)) && Object.entries(filters).every(([key, value]) => key.startsWith('__') || !value || displayValue(getValue(row, key)) === value) && (!filters.__dateFrom || (displayValue(getValue(row, filters.__dateField)).slice(0, 10) >= filters.__dateFrom && displayValue(getValue(row, filters.__dateField)).slice(0, 10) <= filters.__dateTo)));
+  return rows.filter((row) => (!query || [getItemId(row), getValue(row, 'Id'), getValue(row, 'id'), getValue(row, '_id'), ...fields.map((field) => displayValue(getValue(row, field.key)))].join(' ').toLowerCase().includes(query)) && Object.entries(filters).every(([key, value]) => key.startsWith('__') || !value || displayValue(getValue(row, key)) === value) && (!filters.__dateFrom || (displayValue(getValue(row, filters.__dateField)).slice(0, 10) >= filters.__dateFrom && displayValue(getValue(row, filters.__dateField)).slice(0, 10) <= filters.__dateTo)));
 }

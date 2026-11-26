@@ -1,590 +1,148 @@
-import MoveToTrashButton from '../shared/trash/MoveToTrashButton';
-import { usePermissions } from '../../hooks/usePermissions';
 import { useEffect, useState } from 'react';
-import { Card } from 'src/components';
-import {
-  Alert, Col, Row, Tag, Typography, Drawer, Flex, Spin,
-  DatePicker, Slider, Button, Badge, Avatar, Timeline,
-} from 'antd';
-import CountUp from 'react-countup';
-import dashboaradService from 'src/services/dashboaradService';
+import { Alert, Button, Card, Col, DatePicker, Empty, Row, Select, Skeleton, Table, Tag, Tooltip, Typography } from 'antd';
+import dayjs from 'dayjs';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, ClipboardList, Flame, Phone, Target, TrendingUp, UserPlus, UsersRound } from 'lucide-react';
 import { useAuth } from 'src/hooks';
-import { Column, Pie, Area, Gauge } from '@ant-design/plots';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import type { Variants } from 'framer-motion';
-import {
-  Users, UserPlus, Phone, PhoneCall, Mic, CheckCircle,
-  PhoneOff, PhoneMissed, Clock, Timer, TrendingUp, ArrowRight,
-  Activity, BarChart3, AlertTriangle, Flame, Star, Zap,
-  MessageSquare, CalendarCheck, FileText, Globe,
-} from 'lucide-react';
+import { usePermissions } from 'src/hooks/usePermissions';
+import dashboaradService from 'src/services/dashboaradService';
+import './crm-dashboard.css';
 
 const { Text } = Typography;
+const stages = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost'];
+const formatNumber = (value: number) => new Intl.NumberFormat('en-IN').format(value);
+const money = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `₹${formatNumber(value)}` : '—';
+const chartScale = (max: number, minimum = 1) => {
+  if (!Number.isFinite(max) || max <= 0) return minimum * 4;
+  const rawStep = max / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const step = Math.max(minimum, [1, 2, 5, 10].map(multiplier => multiplier * magnitude).find(value => value >= rawStep) ?? magnitude * 10);
+  return Math.max(4, Math.ceil(max / step)) * step;
+};
+const dateText = (value?: string, time = false) => value ? new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', ...(time ? { hour: 'numeric', minute: '2-digit' } : { year: 'numeric' }) }) : '—';
+const person = (value: any) => value?.name || [value?.firstName, value?.lastName].filter(Boolean).join(' ') || '—';
+const empty = (message: string) => <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={message} />;
 
-const fmtDuration = (s: number) =>
-  `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+function RingHitAreas({ segments, total }: { segments: { label: string; value: number }[]; total: number }) {
+  const circumference = 2 * Math.PI * 50;
+  let offset = 0;
+  return <svg className="crm-ring-overlay" viewBox="0 0 120 120" aria-label="Chart segments">
+    {segments.map((segment, index) => {
+      const length = total > 0 ? circumference * segment.value / total : 0;
+      const start = offset;
+      offset += length;
+      if (length <= 0) return null;
+      const label = `${segment.label}: ${formatNumber(segment.value)} leads (${(segment.value / total * 100).toFixed(1)}%)`;
+      return <Tooltip key={`${segment.label}-${index}`} title={label} trigger={['hover', 'focus']}><circle cx="60" cy="60" r="50" fill="none" stroke="transparent" strokeWidth="20" strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-start} transform="rotate(-90 60 60)" tabIndex={0} role="img" aria-label={label} style={{ pointerEvents: 'stroke', cursor: 'pointer' }} /></Tooltip>;
+    })}
+  </svg>;
+}
 
-const fmtTime = (iso: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-};
-
-const fmtDate = (iso: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-};
-
-const KPI_CONFIG = [
-  { key: 'totalUsers',     label: 'Total Users',   icon: Users,       color: '#6366f1', softColor: '#eef2ff', route: null,                         adminOnly: true  },
-  { key: 'totalLeads',     label: 'Total Leads',   icon: UserPlus,    color: '#0ea5e9', softColor: '#e0f2fe', route: '/crm/leads',                  adminOnly: false },
-  { key: 'totalCalls',     label: 'Total Calls',   icon: Phone,       color: '#8b5cf6', softColor: '#f5f3ff', route: '/crm/calls',                  adminOnly: false },
-  { key: 'todayCalls',     label: "Today's Calls", icon: PhoneCall,   color: '#f59e0b', softColor: '#fffbeb', route: '/crm/calls?today=true',       adminOnly: false },
-  { key: 'recordings',    label: 'Recordings',    icon: Mic,         color: '#ef4444', softColor: '#fef2f2', route: '/crm/recordings',             adminOnly: false },
-  { key: 'completedCalls',label: 'Completed',     icon: CheckCircle, color: '#10b981', softColor: '#ecfdf5', route: '/crm/calls?status=completed', adminOnly: false },
-];
-
-const CALL_SUMMARY_ROWS = (stats: any) => [
-  { label: 'Failed',         value: stats?.calls?.failed   || 0,                   icon: PhoneOff,   color: '#ef4444', bg: '#fef2f2' },
-  { label: 'No Answer',      value: stats?.calls?.noAnswer || 0,                   icon: PhoneMissed,color: '#f59e0b', bg: '#fffbeb' },
-  { label: 'Busy',           value: stats?.calls?.busy     || 0,                   icon: Phone,      color: '#f97316', bg: '#fff7ed' },
-  { label: 'Total Duration', value: fmtDuration(stats?.calls?.totalDuration || 0), icon: Clock,      color: '#6366f1', bg: '#eef2ff' },
-  { label: 'Avg Duration',   value: fmtDuration(stats?.calls?.avgDuration   || 0), icon: Timer,      color: '#10b981', bg: '#ecfdf5' },
-];
-
-const LEAD_STATUS_COLORS: Record<string, string> = {
-  New: '#0ea5e9', Contacted: '#10b981', Qualified: '#8b5cf6', Proposal: '#f59e0b', Won: '#06b6d4', Lost: '#ef4444',
-};
-const CALL_STATUS_COLORS: Record<string, string> = {
-  completed: '#10b981', failed: '#ef4444', busy: '#f59e0b', 'no-answer': '#94a3b8',
-};
-const FUNNEL_COLORS: Record<string, string> = {
-  New: '#0ea5e9', Contacted: '#8b5cf6', Qualified: '#f59e0b', Proposal: '#f97316', Won: '#10b981', Lost: '#ef4444',
-};
-const PRIORITY_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
-  high:   { color: '#ef4444', bg: '#fef2f2', icon: Flame },
-  medium: { color: '#f59e0b', bg: '#fffbeb', icon: AlertTriangle },
-  low:    { color: '#10b981', bg: '#ecfdf5', icon: Star },
-};
-const ACTIVITY_ICON: Record<string, { icon: any; color: string }> = {
-  call:     { icon: Phone,          color: '#8b5cf6' },
-  note:     { icon: FileText,       color: '#0ea5e9' },
-  email:    { icon: MessageSquare,  color: '#10b981' },
-  meeting:  { icon: CalendarCheck,  color: '#f59e0b' },
-  whatsapp: { icon: MessageSquare,  color: '#25d366' },
-  visit:    { icon: Globe,          color: '#ef4444' },
-  task:     { icon: Zap,            color: '#6366f1' },
-};
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
-};
-const stagger: Variants = {
-  hidden: {},
-  show:   { transition: { staggerChildren: 0.07 } },
-};
-
-const SalesDashBoard = () => {
-  const { canDelete }         = usePermissions();
+export default function SalesDashBoard() {
+  const { user } = useAuth();
+  const { canRead } = usePermissions();
   const { getDashboardStats } = dashboaradService();
-  const { isAdmin, user }     = useAuth();
-  const navigate              = useNavigate();
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [stats, setStats]     = useState<any>(null);
-  const [statsError, setStatsError] = useState(false);
-  const [reload, setReload] = useState(0);
-
+  const [stats, setStats] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [period, setPeriod] = useState('all');
+  const [customRange, setCustomRange] = useState<[string, string] | null>(null);
+  const indiaToday = dayjs(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
+  const range = period === 'today' ? [indiaToday.format('YYYY-MM-DD'), indiaToday.format('YYYY-MM-DD')] : period === 'week' ? [indiaToday.startOf('week').format('YYYY-MM-DD'), indiaToday.format('YYYY-MM-DD')] : period === 'month' ? [indiaToday.startOf('month').format('YYYY-MM-DD'), indiaToday.format('YYYY-MM-DD')] : period === 'custom' ? customRange : null;
+  const startDate = range?.[0], endDate = range?.[1];
   useEffect(() => {
     let active = true;
-    setStats(null);
-    setStatsError(false);
-    getDashboardStats().then((res: any) => { if (active) setStats(res.data); })
-      .catch(() => { if (active) setStatsError(true); });
+    setStats(null); setError('');
+    if (period === 'custom' && !customRange) return () => { active = false; };
+    getDashboardStats('crm', startDate && endDate ? { leadStartDate: startDate, leadEndDate: endDate } : undefined).then((res: any) => {
+      if (!res?.success || !res.data) throw new Error('Invalid dashboard response');
+      if (startDate && endDate && (res.data.leadDateRange?.start !== startDate || res.data.leadDateRange?.end !== endDate)) throw new Error('Lead date filter unavailable on the connected API');
+      if (active) setStats(res.data);
+    }).catch((reason) => { if (active) setError(reason instanceof Error && reason.message === 'Lead date filter unavailable on the connected API' ? 'The connected backend does not support this date filter yet. Update the backend and retry.' : 'Please check your connection and try again.'); });
     return () => { active = false; };
-  }, [(user as any)?._id, reload]);
-
-  const goto = (link: string) => navigate(link);
-
-  const kpiValues: Record<string, number> = {
-    totalUsers:     stats?.totals?.totalUsers         || 0,
-    totalLeads:     stats?.totals?.totalLeads         || 0,
-    totalCalls:     stats?.totals?.totalCalls         || 0,
-    todayCalls:     stats?.calls?.todayCalls          || 0,
-    recordings:     stats?.calls?.recordingsAvailable || 0,
-    completedCalls: stats?.calls?.completed           || 0,
-  };
-
-  const visibleKpis = KPI_CONFIG.filter((k) => !k.adminOnly || isAdmin);
-
-  const trendRaw: any[] = stats?.trend || [];
-  const trendData = trendRaw.flatMap((d: any) => [
-    { month: d.month, value: d.leads, type: 'Leads' },
-    { month: d.month, value: d.calls, type: 'Calls' },
-  ]);
-
-  const funnelOrder = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost'];
-  const byStatus: any[] = stats?.leads?.byStatus || [];
-  const funnelData = funnelOrder
-    .map((s) => ({ status: s, count: byStatus.find((x: any) => x.status === s)?.count || 0 }))
-    .filter((d) => d.count > 0);
-  const funnelMax = Math.max(...funnelData.map((d) => d.count), 1);
-
-  const totalCalls  = stats?.totals?.totalCalls || 1;
-  const completed   = stats?.calls?.completed   || 0;
-  const successRate = Math.min(completed / totalCalls, 1);
-
-  const priorityLeads: any[] = stats?.leads?.priorityLeads || stats?.priorityLeads || [];
-  const recentActivities: any[] = stats?.recentActivities || [];
-  const bySource: any[] = stats?.leads?.bySource || [];
-
-  if (statsError) return <Alert type="error" showIcon message="Dashboard data could not be loaded" action={<Button onClick={() => setReload(value => value + 1)}>Retry</Button>} />;
-  if (!stats) return <Spin tip="Loading dashboard"><div style={{ minHeight: 160 }} /></Spin>;
-
-  return (
-    <div className="sales-dashboard">
-
-      {/* ── KPI CARDS ── */}
-      <motion.div variants={stagger} initial="hidden" animate="show">
-        <Row gutter={[16, 16]}>
-          {visibleKpis.map((kpi) => {
-            const Icon = kpi.icon;
-            return (
-              <Col key={kpi.key} xs={12} sm={8} md={8} lg={4}>
-                <motion.div variants={fadeUp}>
-                  <div
-                    className="kpi-card"
-                    style={{ '--kpi-color': kpi.color, '--kpi-soft': kpi.softColor, cursor: kpi.route ? 'pointer' : 'default' } as React.CSSProperties}
-                    onClick={() => kpi.route && goto(kpi.route)}
-                    role={kpi.route ? 'button' : undefined}
-                    tabIndex={kpi.route ? 0 : undefined}
-                  >
-                    <div className="kpi-card-icon"><Icon size={20} strokeWidth={1.8} /></div>
-                    <div className="kpi-card-body">
-                      <span className="kpi-label">{kpi.label}</span>
-                      <span className="kpi-value"><CountUp end={kpiValues[kpi.key]} duration={1.4} /></span>
-                    </div>
-                    {kpi.route && <ArrowRight size={14} className="kpi-arrow" strokeWidth={2} />}
-                  </div>
-                </motion.div>
-              </Col>
-            );
-          })}
-        </Row>
-      </motion.div>
-
-      {/* ── ROW 2: Trend + Gauge ── */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={16}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.15 }}>
-            <Card
-              className="dashboard-chart-card"
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-icon-wrap" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>
-                    <Activity size={15} strokeWidth={2} />
-                  </span>
-                  Lead &amp; Call Trend
-                  <Tag color="blue" style={{ marginLeft: 'auto', fontSize: 10 }}>Last 6 months</Tag>
-                </Flex>
-              }
-            >
-              {trendData.length ? <Area
-                data={trendData}
-                xField="month" yField="value" seriesField="type"
-                height={220} smooth
-                areaStyle={{ fillOpacity: 0.18 }}
-                color={['#0ea5e9', '#8b5cf6']}
-                legend={{ position: 'top-right' }}
-              /> : <Text type="secondary">Trend data is not available.</Text>}
-            </Card>
-          </motion.div>
-        </Col>
-
-        <Col xs={24} lg={8}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.22 }}>
-            <Card
-              className="dashboard-chart-card gauge-card"
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-icon-wrap" style={{ background: '#ecfdf5', color: '#10b981' }}>
-                    <CheckCircle size={15} strokeWidth={2} />
-                  </span>
-                  Call Success Rate
-                </Flex>
-              }
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <Gauge
-                  percent={successRate} height={200}
-                  range={{ color: ['#ef4444', '#f59e0b', '#10b981'] }}
-                  indicator={{
-                    pointer: { style: { stroke: '#10b981' } },
-                    pin:     { style: { stroke: '#10b981' } },
-                  }}
-                  statistic={{
-                    content: {
-                      formatter: () => `${Math.round(successRate * 100)}%`,
-                      style: { fontSize: '28px', fontWeight: '700', color: '#10b981' },
-                    },
-                    title: {
-                      formatter: () => 'Success',
-                      style: { fontSize: '12px', color: '#94a3b8' },
-                    },
-                  }}
-                />
-                <Flex gap={16} justify="center">
-                  <Flex align="center" gap={5}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                    <Text style={{ fontSize: 11 }}>Completed <strong style={{ color: '#10b981' }}>{completed}</strong></Text>
-                  </Flex>
-                  <Flex align="center" gap={5}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                    <Text style={{ fontSize: 11 }}>Others <strong style={{ color: '#ef4444' }}>{totalCalls - completed}</strong></Text>
-                  </Flex>
-                </Flex>
-              </div>
-            </Card>
-          </motion.div>
-        </Col>
-      </Row>
-
-      {/* ── ROW 3: bySource Pie + Lead Funnel + Priority Leads ── */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-
-        {/* Leads by Source */}
-        <Col xs={24} md={12} lg={8}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.2 }}>
-            <Card
-              className="dashboard-chart-card"
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-dot" style={{ background: '#8b5cf6' }} />
-                  Leads by Source
-                </Flex>
-              }
-            >
-              <Pie
-                data={bySource}
-                angleField="count" colorField="source"
-                height={220} radius={0.78} innerRadius={0.55}
-                label={false}
-                legend={{ position: 'bottom', flipPage: false }}
-                statistic={{
-                  title: { content: 'Sources', style: { fontSize: '13px' } },
-                  content: { content: String(bySource.reduce((a: number, b: any) => a + (b.count || 0), 0)), style: { fontSize: '22px', fontWeight: '700' } },
-                }}
-              />
-            </Card>
-          </motion.div>
-        </Col>
-
-        {/* Lead Funnel */}
-        <Col xs={24} md={12} lg={8}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.25 }}>
-            <Card
-              className="dashboard-chart-card"
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-icon-wrap" style={{ background: '#fff7ed', color: '#f97316' }}>
-                    <BarChart3 size={15} strokeWidth={2} />
-                  </span>
-                  Lead Funnel
-                </Flex>
-              }
-            >
-              <div className="lead-funnel">
-                {(funnelData.length > 0 ? funnelData : funnelOrder.map((s) => ({ status: s, count: 0 }))).map((d, i) => (
-                  <motion.div
-                    key={d.status} className="funnel-row"
-                    initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + i * 0.07, duration: 0.4, ease: 'easeOut' }}
-                  >
-                    <span className="funnel-label">{d.status}</span>
-                    <div className="funnel-bar-wrap">
-                      <motion.div
-                        className="funnel-bar"
-                        style={{ background: FUNNEL_COLORS[d.status] }}
-                        initial={{ width: '0%' }}
-                        animate={{ width: `${(d.count / funnelMax) * 100}%` }}
-                        transition={{ delay: 0.4 + i * 0.07, duration: 0.6, ease: 'easeOut' }}
-                      />
-                    </div>
-                    <span className="funnel-count" style={{ color: FUNNEL_COLORS[d.status] }}>{d.count}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
-        </Col>
-
-        {/* Priority Leads */}
-        <Col xs={24} lg={8}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.3 }}>
-            <Card
-              className="dashboard-chart-card"
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-icon-wrap" style={{ background: '#fef2f2', color: '#ef4444' }}>
-                    <Flame size={15} strokeWidth={2} />
-                  </span>
-                  Priority Leads
-                  <Badge count={priorityLeads.length} style={{ backgroundColor: '#ef4444', marginLeft: 4 }} />
-                </Flex>
-              }
-              styles={{ body: { padding: '8px 16px' } }}
-            >
-              <div className="priority-leads-list">
-                {priorityLeads.length === 0 && (
-                  <div className="recent-calls-empty">
-                    <Flame size={26} strokeWidth={1.4} style={{ color: '#fca5a5' }} />
-                    <Text type="secondary" style={{ fontSize: 12 }}>No priority leads</Text>
-                  </div>
-                )}
-                {priorityLeads.slice(0, 6).map((lead: any, i: number) => {
-                  const p = lead.priority?.toLowerCase() || 'low';
-                  const cfg = PRIORITY_CONFIG[p] || PRIORITY_CONFIG.low;
-                  const PIcon = cfg.icon;
-                  return (
-                    <motion.div
-                      key={lead._id || i}
-                      className="priority-lead-item"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.35 + i * 0.05, duration: 0.35, ease: 'easeOut' }}
-                      onClick={() => goto('/crm/leads')}
-                    >
-                      <Flex align="center" gap={10}>
-                        <span className="priority-lead-icon" style={{ background: cfg.bg, color: cfg.color }}>
-                          <PIcon size={13} strokeWidth={2} />
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Text strong style={{ fontSize: 12, display: 'block' }} ellipsis>{lead.name || 'Unknown'}</Text>
-                          <Text type="secondary" style={{ fontSize: 10 }}>{lead.phone || lead.mobile || ''}</Text>
-                        </div>
-                        <Tag
-                          style={{ margin: 0, fontSize: 10, borderRadius: 6, background: cfg.bg, color: cfg.color, border: 'none' }}
-                        >
-                          {p}
-                        </Tag>
-                      </Flex>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </Card>
-          </motion.div>
-        </Col>
-      </Row>
-
-      {/* ── ROW 4: Charts + Recent Activities ── */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={16}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.2 }}>
-                <Card className="dashboard-chart-card"
-                  title={<Flex align="center" gap={8}><span className="chart-card-dot" style={{ background: '#0ea5e9' }} />Leads by Status</Flex>}
-                >
-                  <Column
-                    data={stats?.leads?.byStatus || []}
-                    xField="status" yField="count" height={200}
-                    color={(datum: any) => LEAD_STATUS_COLORS[datum.status as string] || '#0ea5e9'}
-                  />
-                </Card>
-              </motion.div>
-            </Col>
-
-            <Col xs={24} md={12}>
-              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.25 }}>
-                <Card className="dashboard-chart-card"
-                  title={<Flex align="center" gap={8}><span className="chart-card-dot" style={{ background: '#f59e0b' }} />Calls by Status</Flex>}
-                >
-                  <Column
-                    data={stats?.calls?.byStatus || []}
-                    xField="status" yField="count" height={200}
-                    color={(datum: any) => CALL_STATUS_COLORS[datum.status as string] || '#0ea5e9'}
-                  />
-                </Card>
-              </motion.div>
-            </Col>
-
-            <Col xs={24} md={12}>
-              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.28 }}>
-                <Card className="dashboard-chart-card"
-                  title={<Flex align="center" gap={8}><TrendingUp size={15} strokeWidth={2} style={{ color: '#10b981' }} />Call Summary</Flex>}
-                >
-                  <div className="call-summary-list">
-                    {CALL_SUMMARY_ROWS(stats).map((row) => {
-                      const Icon = row.icon;
-                      return (
-                        <div key={row.label} className="call-summary-row">
-                          <Flex align="center" gap={10}>
-                            <span className="call-summary-icon" style={{ background: row.bg, color: row.color }}>
-                              <Icon size={14} strokeWidth={2} />
-                            </span>
-                            <Text style={{ fontSize: 13 }}>{row.label}</Text>
-                          </Flex>
-                          <Text strong style={{ color: row.color, fontSize: 13 }}>{row.value}</Text>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              </motion.div>
-            </Col>
-
-            <Col xs={24} md={12}>
-              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.33 }}>
-                <Card
-                  className="dashboard-chart-card recent-calls-card"
-                  title={
-                    <Flex align="center" justify="space-between">
-                      <Flex align="center" gap={8}>
-                        <span className="chart-card-dot" style={{ background: '#ef4444' }} />
-                        Recent Calls
-                      </Flex>
-                      <Badge count={stats?.calls?.recentCalls?.length || 0} style={{ backgroundColor: '#ef4444' }} />
-                    </Flex>
-                  }
-                  styles={{ body: { padding: '8px 16px' } }}
-                >
-                  <div className="recent-calls-list" style={{ maxHeight: 260 }}>
-                    {(stats?.calls?.recentCalls || []).map((call: any, idx: number) => (
-                      <motion.div
-                        key={call._id} className="recent-call-item"
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 + idx * 0.04, duration: 0.35, ease: 'easeOut' }}
-                        onClick={() => goto(`/crm/calls?callSid=${call?.callSid}`)}
-                      >
-                        <Flex justify="space-between" align="flex-start" gap={8}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <Text strong style={{ fontSize: 12, display: 'block' }} ellipsis>
-                              {call?.leadId?.name || 'Unknown Lead'}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: 10 }}>
-                              {call?.userId?.firstName} {call?.userId?.lastName}
-                            </Text>
-                          </div>
-                          {canDelete('calls') && (
-                            <MoveToTrashButton recordId={call._id} modelType="call"
-                              onMoved={async () => {
-                                const r = await getDashboardStats() as { data: unknown };
-                                setStats(r.data);
-                              }}
-                            />
-                          )}
-                        </Flex>
-                        <Flex gap={4} wrap="wrap" style={{ marginTop: 6 }}>
-                          <Tag color={call?.direction === 'outgoing' ? 'blue' : 'green'} style={{ margin: 0, fontSize: 10 }}>{call?.direction}</Tag>
-                          <Tag color={call?.status === 'completed' ? 'success' : call?.status === 'failed' ? 'error' : 'default'} style={{ margin: 0, fontSize: 10 }}>{call?.status}</Tag>
-                        </Flex>
-                      </motion.div>
-                    ))}
-                    {(!stats?.calls?.recentCalls || stats.calls.recentCalls.length === 0) && (
-                      <div className="recent-calls-empty">
-                        <Phone size={26} strokeWidth={1.4} style={{ color: '#cbd5e1' }} />
-                        <Text type="secondary" style={{ fontSize: 12 }}>No recent calls</Text>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            </Col>
-          </Row>
-        </Col>
-
-        {/* Recent Activities */}
-        <Col xs={24} lg={8}>
-          <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.3 }} style={{ height: '100%' }}>
-            <Card
-              className="dashboard-chart-card"
-              style={{ height: '100%' }}
-              title={
-                <Flex align="center" gap={8}>
-                  <span className="chart-card-icon-wrap" style={{ background: '#eef2ff', color: '#6366f1' }}>
-                    <Zap size={15} strokeWidth={2} />
-                  </span>
-                  Recent Activities
-                  <Badge count={recentActivities.length} style={{ backgroundColor: '#6366f1', marginLeft: 4 }} />
-                </Flex>
-              }
-              styles={{ body: { padding: '12px 16px' } }}
-            >
-              {recentActivities.length === 0 ? (
-                <div className="recent-calls-empty">
-                  <Zap size={26} strokeWidth={1.4} style={{ color: '#c7d2fe' }} />
-                  <Text type="secondary" style={{ fontSize: 12 }}>No recent activities</Text>
-                </div>
-              ) : (
-                <div className="activity-feed">
-                  <Timeline
-                    items={recentActivities.slice(0, 8).map((act: any, i: number) => {
-                      const type = act.type?.toLowerCase() || 'task';
-                      const cfg = ACTIVITY_ICON[type] || ACTIVITY_ICON.task;
-                      const AIcon = cfg.icon;
-                      const actor = act.userId || act.createdBy;
-                      const actorName = typeof actor === 'string' ? actor :
-                        [actor?.firstName, actor?.lastName].filter(Boolean).join(' ') || actor?.name || actor?.email || 'Agent';
-                      return {
-                        dot: (
-                          <span className="activity-dot" style={{ background: cfg.color }}>
-                            <AIcon size={11} strokeWidth={2.2} color="#fff" />
-                          </span>
-                        ),
-                        children: (
-                          <motion.div
-                            className="activity-item"
-                            initial={{ opacity: 0, x: 8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.35 + i * 0.05, duration: 0.35, ease: 'easeOut' }}
-                          >
-                            <Flex justify="space-between" align="flex-start" gap={6}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <Text strong style={{ fontSize: 12, display: 'block' }} ellipsis>
-                                  {act.leadId?.name || act.title || 'Activity'}
-                                </Text>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                  {act.content || act.note || act.description || act.type || ''}
-                                </Text>
-                              </div>
-                              <Text type="secondary" style={{ fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                {act.createdAt ? fmtDate(act.createdAt) : ''}
-                              </Text>
-                            </Flex>
-                            <Flex align="center" gap={6} style={{ marginTop: 4 }}>
-                              <Avatar size={16} style={{ background: '#e0e7ff', color: '#6366f1', fontSize: 9 }}>
-                                {actorName.charAt(0).toUpperCase()}
-                              </Avatar>
-                              <Text type="secondary" style={{ fontSize: 10 }}>
-                                {actorName}
-                                {act.createdAt ? ` · ${fmtTime(act.createdAt)}` : ''}
-                              </Text>
-                            </Flex>
-                          </motion.div>
-                        ),
-                      };
-                    })}
-                  />
-                </div>
-              )}
-            </Card>
-          </motion.div>
-        </Col>
-      </Row>
-
-      {/* FILTER DRAWER */}
-      <Drawer title="CRM Filters" placement="right" onClose={() => setFilterOpen(false)} open={filterOpen}>
-        <Flex vertical gap="large">
-          <DatePicker.RangePicker />
-          <Slider range defaultValue={[0, 100000]} />
-          <Button type="primary" block>Apply</Button>
-        </Flex>
-      </Drawer>
-    </div>
-  );
-};
-
-export default SalesDashBoard;
+  }, [(user as any)?._id, attempt, period, startDate, endDate]);
+  const canLeads = canRead('leads'), canCalls = canRead('calls');
+  const counts: any[] = stats?.leads?.byStatus || [];
+  const sources: any[] = stats?.leads?.bySource || [];
+  const findStage = (stage: string) => counts.find(row => row.status === stage);
+  const won = findStage('Won')?.count || 0, lost = findStage('Lost')?.count || 0;
+  const activeValueAvailable = ['New', 'Contacted', 'Qualified', 'Proposal'].every(stage => !findStage(stage) || typeof findStage(stage).value === 'number');
+  const activeValue = ['New', 'Contacted', 'Qualified', 'Proposal'].reduce((sum, stage) => sum + (findStage(stage)?.value || 0), 0);
+  const sourceTotal = sources.reduce((sum, source) => sum + (source.count || 0), 0);
+  let sourceOffset = 0;
+  const sourceColors = ['#c44917', '#6489cb', '#71a999', '#e5ad70', '#9a83ba', '#bcc6d6'];
+  const sourceGradient = sources.map((source, index) => { const start = sourceOffset; sourceOffset += sourceTotal ? source.count / sourceTotal * 100 : 0; return `${sourceColors[index % sourceColors.length]} ${start}% ${sourceOffset}%`; }).join(', ');
+  const stageValuesAvailable = counts.every(item => typeof item.value === 'number' && Number.isFinite(item.value));
+  const maxStageCount = chartScale(Math.max(0, ...counts.map(item => Number(item.count) || 0)));
+  const maxStageValue = chartScale(Math.max(0, ...counts.map(item => Number(item.value) || 0)));
+  const axisFractions = [1, 0.75, 0.5, 0.25, 0];
+  const monthly: any[] | null = Array.isArray(stats?.leads?.monthly) ? stats.leads.monthly : null;
+  const maxWonValue = Math.max(1, ...(monthly || []).map(item => Number(item.wonValue) || 0));
+  const trendScale = chartScale(Math.max(0, ...(monthly || []).map(item => Number(item.created) || 0)));
+  const trendX = (index: number) => monthly?.length === 1 ? 310 : 50 + index * (520 / Math.max((monthly?.length || 1) - 1, 1));
+  const trendY = (value: number) => 170 - (Math.max(0, value) / trendScale) * 140;
+  const trendPath = (field: 'created' | 'open' | 'won') => (monthly || []).map((item, index) => `${index ? 'L' : 'M'} ${trendX(index)} ${trendY(Number(item[field]) || 0)}`).join(' ');
+  const kpis = [
+    { title: 'Total leads', value: stats?.totals?.totalLeads ?? 0, note: period === 'all' ? 'All accessible leads' : 'Created in selected period', icon: UsersRound, className: 'orange' },
+    { title: 'Added today', value: stats?.leads?.today ?? 0, note: 'Within selected period · India time', icon: UserPlus, className: 'blue' },
+    { title: 'Open leads', value: stats?.leads?.open ?? 0, note: 'Active in pipeline', icon: Target, className: 'purple' },
+    { title: 'High-priority open', value: stats?.leads?.highPriority ?? 0, note: 'High and urgent leads', icon: Flame, className: 'red' },
+  ];
+  return <div className="crm-home">
+    <header className="crm-home-header"><div><div className="crm-home-eyebrow">SALES WORKSPACE</div><h1>CRM Dashboard</h1><p>Welcome back{user?.firstName ? `, ${user.firstName}` : ''}. Here’s your sales pipeline and team priorities.</p></div><div className="crm-header-actions">{canLeads && <Select aria-label="Lead creation period" value={period} onChange={setPeriod} style={{ minWidth: 150 }} options={[{ value: 'all', label: 'All leads' }, { value: 'month', label: 'This month' }, { value: 'week', label: 'This week' }, { value: 'today', label: 'Today' }, { value: 'custom', label: 'Custom range' }]} />}{canLeads && period === 'custom' && <DatePicker.RangePicker aria-label="Lead creation date range" value={customRange ? [dayjs(customRange[0]), dayjs(customRange[1])] : null} onChange={dates => setCustomRange(dates?.[0] && dates?.[1] ? [dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')] : null)} />}<span className="crm-home-period"><span /> Lead creation period · India time</span><Button onClick={() => setAttempt(value => value + 1)}>Refresh data</Button></div></header>
+    {error ? <Alert type="error" showIcon message="Dashboard data could not be loaded" description={error} action={<Button onClick={() => setAttempt(value => value + 1)}>Retry</Button>} /> : period === 'custom' && !customRange ? <Alert type="info" showIcon message="Choose a start and end date to filter leads." /> : !stats ? <Card><Skeleton active paragraph={{ rows: 8 }} /></Card> : <>
+      {canLeads && <>
+        <Row gutter={[16, 16]} className="crm-kpi-row">{kpis.map(({ title, value, note, icon: Icon, className }) => <Col xs={24} sm={12} xl={6} key={title}><Card className="crm-kpi"><div className="crm-kpi-heading"><span>{title}</span><span className={`crm-icon ${className}`}><Icon size={19} /></span></div><strong>{formatNumber(value)}</strong><small>{note}</small></Card></Col>)}</Row>
+        <Card className="crm-panel crm-pipeline" title={<div><span>Lead pipeline</span><small> Current active value: {activeValueAvailable ? money(activeValue) : '—'}</small></div>} extra={<span className="crm-conversion"><CheckCircle2 size={15} /> Won / closed: {won + lost ? `${Math.round(won * 100 / (won + lost))}%` : '—'}</span>}>
+          <div className="crm-stage-strip">{stages.map((stage, i) => { const count = findStage(stage)?.count || 0; const total = counts.reduce((sum, item) => sum + (item.count || 0), 0); return count > 0 ? <span className={`strip-${i}`} key={stage} style={{ width: `${count / total * 100}%` }} title={`${stage}: ${count}`} /> : null; })}</div><div className="crm-stages">{stages.map((stage, i) => { const row = findStage(stage); return <div className={`crm-stage stage-${i}`} key={stage}><span>{i + 1}. {stage}</span><strong>{formatNumber(row?.count || 0)} <small>leads</small></strong><small>{row ? money(row.value) : '₹0'} value</small></div>; })}</div>
+        </Card>
+        <Card className="crm-panel crm-analytics" title={<><TrendingUp size={17} /> Pipeline &amp; lead flow analytics</>} extra={<Text type="secondary">{period === 'all' ? 'All accessible leads' : 'Created in selected period'}</Text>}><div className="crm-analytics-grid"><div className="crm-analytics-box"><div className="crm-analytics-title">Pipeline by stage</div>
+          {counts.length ? <><div className="crm-chart-legend"><span><i className="crm-legend-value" /> Lead value (₹, left)</span><span><i className="crm-legend-count" /> Lead count (right)</span><small>Each measure uses its own scale</small></div>{!stageValuesAvailable && <Alert type="info" showIcon message="Lead values are not available from the connected backend yet." />}<div className="crm-chart-scroll"><div className="crm-pipeline-plot"><div className="crm-chart-y-axis" aria-label="Lead value scale in rupees">{axisFractions.map(fraction => <span key={fraction}>{stageValuesAvailable ? money(maxStageValue * fraction) : '—'}</span>)}</div><div className="crm-chart-plot-area"><div className="crm-chart-gridlines" aria-hidden="true">{axisFractions.map(fraction => <span key={fraction} />)}</div><div className="crm-vertical-chart">{stages.map(stage => { const row = findStage(stage), count = row?.count || 0, value = typeof row?.value === 'number' ? row.value : 0; const valueLabel = row ? money(row.value) : '₹0'; return <div className="crm-chart-stage" key={stage}><div className="crm-chart-bars"><Tooltip title={`${stage} · Lead value: ${valueLabel}`} trigger={['hover', 'focus']}><div className="crm-chart-hit" tabIndex={0} role="img" aria-label={`${stage} lead value: ${valueLabel}`}><div className="crm-chart-bar crm-value-bar" style={{ height: `${value / maxStageValue * 100}%` }} /></div></Tooltip><Tooltip title={`${stage} · ${formatNumber(count)} leads`} trigger={['hover', 'focus']}><div className="crm-chart-hit" tabIndex={0} role="img" aria-label={`${stage}: ${formatNumber(count)} leads`}><div className="crm-chart-bar crm-count-bar" style={{ height: `${count / maxStageCount * 100}%` }} /></div></Tooltip></div><strong>{formatNumber(count)} leads</strong><span>{stage}</span><small>{valueLabel}</small></div>; })}</div></div><div className="crm-chart-y-axis crm-chart-count-axis" aria-label="Lead count scale">{axisFractions.map(fraction => <span key={fraction}>{formatNumber(maxStageCount * fraction)}</span>)}</div></div></div></> : empty('No leads in the pipeline yet')}
+        </div><div className="crm-analytics-box crm-source"><div className="crm-analytics-title">Lead source mix <span>By lead count</span></div>
+          {sourceTotal > 0 ? <div className="crm-source-layout"><div className="crm-source-donut" style={{ background: `conic-gradient(${sourceGradient})` }}><div><strong>{formatNumber(sourceTotal)}</strong><small>Leads</small></div><RingHitAreas total={sourceTotal} segments={sources.map(source => ({ label: source.source || 'Unspecified', value: Number(source.count) || 0 }))} /></div><div className="crm-source-list">{sources.map((source, index) => <div className="crm-source-row" key={source.source || index}><i style={{ background: sourceColors[index % sourceColors.length] }} /><span>{source.source || 'Unspecified'}</span><strong>{formatNumber(source.count)}</strong></div>)}</div></div> : empty('No lead sources to show')}
+        </div></div></Card>
+        <Card className="crm-panel crm-outcome-card" title="Closed leads at a glance" extra={<Text type="secondary">Current status · selected lead period</Text>}>
+          {won + lost > 0 ? <div className="crm-outcome-layout"><div className="crm-outcome-ring" role="group" aria-label={`${Math.round(won * 100 / (won + lost))}% won among closed leads`} style={{ background: `conic-gradient(#25a27a 0 ${(won / (won + lost)) * 100}%, #ef8c78 ${(won / (won + lost)) * 100}% 100%)` }}><div><strong>{Math.round(won * 100 / (won + lost))}%</strong><small>won / closed</small></div><RingHitAreas total={won + lost} segments={[{ label: 'Won', value: won }, { label: 'Lost', value: lost }]} /></div><div className="crm-outcome-details"><div><span className="crm-outcome-dot won" /><span>Won</span><strong>{formatNumber(won)}</strong></div><div><span className="crm-outcome-dot lost" /><span>Lost</span><strong>{formatNumber(lost)}</strong></div><p>Won ÷ (Won + Lost). This reflects lead status, including manually marked Won leads.</p></div></div> : empty('No won or lost leads in this period')}
+        </Card>
+        <Card className="crm-panel crm-monthly" title={<><TrendingUp size={17} /> Monthly lead comparison</>} extra={<Text type="secondary">Lead creation month · India time</Text>}>
+          <p className="crm-chart-explainer">Up to six months ending in the selected period. Counts follow the selected creation dates and show each lead’s current status. Pending means New, Contacted, Qualified or Proposal. Won includes leads marked Won; converted customers are marked Won by the conversion flow.</p>
+          {!monthly ? <Alert type="info" showIcon message="Monthly data is not available from the connected backend yet." /> : !monthly.some(item => item.created > 0) ? empty('No leads created in these months') : <div className="crm-monthly-grid">
+            <div className="crm-analytics-box crm-trend-box">
+              <div className="crm-analytics-title">Lead journey <span>Created, pending and won by creation month</span></div>
+              <div className="crm-chart-legend"><span><i className="crm-month-created" /> Created</span><span><i className="crm-month-open" /> Pending</span><span><i className="crm-month-won" /> Won</span></div>
+              <div className="crm-trend-scroll"><svg className="crm-trend-chart" viewBox="0 0 600 205" role="img" aria-label="Monthly leads created, pending and won. Values are listed below the chart.">
+                <defs><linearGradient id="crmTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#677ce5" stopOpacity="0.28" /><stop offset="100%" stopColor="#677ce5" stopOpacity="0.02" /></linearGradient></defs>
+                {[1, 0.75, 0.5, 0.25, 0].map(fraction => <g key={fraction}><line x1="50" x2="570" y1={trendY(trendScale * fraction)} y2={trendY(trendScale * fraction)} stroke="#d9e2f3" strokeDasharray="4 5" /><text x="42" y={trendY(trendScale * fraction) + 4} textAnchor="end" className="crm-trend-axis">{formatNumber(trendScale * fraction)}</text></g>)}
+                {monthly.length > 1 && <path d={`${trendPath('created')} L ${trendX(monthly.length - 1)} 170 L ${trendX(0)} 170 Z`} fill="url(#crmTrendFill)" />}
+                {([['created', '#6579dc'], ['open', '#ed9b34'], ['won', '#24a276']] as const).map(([field, color]) => <g key={field}><path d={trendPath(field)} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />{monthly.map((item, index) => <circle key={item.month} cx={trendX(index)} cy={trendY(Number(item[field]) || 0)} r="4.5" fill="#fff" stroke={color} strokeWidth="3"><title>{`${item.month} ${field}: ${formatNumber(item[field] || 0)}`}</title></circle>)}</g>)}
+                {monthly.map((item, index) => { const left = index === 0 ? 35 : (trendX(index - 1) + trendX(index)) / 2; const right = index === monthly.length - 1 ? 585 : (trendX(index) + trendX(index + 1)) / 2; const label = `${dayjs(`${item.month}-01`).format('MMM YYYY')}: ${formatNumber(item.created)} created, ${formatNumber(item.open)} pending, ${formatNumber(item.won)} won`; return <Tooltip key={`hover-${item.month}`} title={label} trigger={['hover', 'focus']}><rect x={left} y="20" width={right - left} height="155" fill="transparent" tabIndex={0} role="img" aria-label={label} style={{ cursor: 'crosshair' }} /></Tooltip>; })}
+                {monthly.map((item, index) => <text key={item.month} x={trendX(index)} y="195" textAnchor="middle" className="crm-trend-axis">{dayjs(`${item.month}-01`).format('MMM YY')}</text>)}
+              </svg></div>
+              <div className="crm-trend-values">{monthly.map(item => <div key={item.month}><strong>{dayjs(`${item.month}-01`).format('MMM YY')}</strong><span>{formatNumber(item.created)} created · {formatNumber(item.open)} pending · {formatNumber(item.won)} won</span></div>)}</div>
+              <small className="crm-chart-footnote">Lost leads are included in created, but not in pending or won.</small>
+            </div>
+            <div className="crm-analytics-box"><div className="crm-analytics-title">Won lead value <span>Estimated lead value, not collected revenue</span></div><div className="crm-month-chart crm-month-values" style={{ gridTemplateColumns: `repeat(${monthly.length}, minmax(0, 1fr))` }}>{monthly.map(item => <div className="crm-month-group" key={item.month}><div className="crm-month-bars"><Tooltip title={`${dayjs(`${item.month}-01`).format('MMM YYYY')} · Won lead value: ${money(item.wonValue)}`} trigger={['hover', 'focus']}><div className="crm-month-hit" tabIndex={0} role="img" aria-label={`${item.month} won lead value: ${money(item.wonValue)}`}><div className="crm-month-bar crm-month-value" style={{ height: `${(Number(item.wonValue) || 0) / maxWonValue * 100}%` }} /></div></Tooltip></div><strong>{money(item.wonValue)}</strong><span>{dayjs(`${item.month}-01`).format('MMM YY')}</span></div>)}</div></div>
+          </div>}
+        </Card>
+      </>}
+      {canLeads && <div className="crm-work-grid"><div className="crm-work-main"><Card className="crm-panel" title="Recently added leads" extra={<Link className="crm-link" to="/crm/leads">View all leads <ArrowRight size={15} /></Link>}>
+          <Table size="middle" rowKey="_id" pagination={false} scroll={{ x: 700 }} dataSource={stats.leads?.recent || []} locale={{ emptyText: empty('No leads added yet') }} columns={[
+            { title: 'LEAD / ACCOUNT', render: (_: unknown, row: any) => <div><Link className="crm-lead-name" to={`/crm/leads?id=${encodeURIComponent(row._id)}`}>{row.name || 'Unnamed lead'}</Link><small className="crm-muted-line">{row.company || row.Id || '—'}</small></div> },
+            { title: 'STATUS', dataIndex: 'status', render: (value: string) => <Tag className="crm-status">{value || '—'}</Tag> },
+            { title: 'SOURCE', dataIndex: 'source', render: (value: string) => value || '—' },
+            { title: 'PRIORITY', dataIndex: 'priority', render: (value: string) => value || '—' },
+            { title: 'ASSIGNED TO', dataIndex: 'assignedTo', render: person },
+            { title: 'ADDED', dataIndex: 'createdAt', render: (value: string) => dateText(value) },
+          ]} />
+        </Card>
+{canLeads && <div><Card className="crm-panel" title={<><Flame size={17} /> High-priority leads</>} extra={<Link className="crm-link" to="/crm/leads">View leads <ArrowRight size={15} /></Link>}>
+        {(stats.priorityLeads || []).length ? <div className="crm-priority-list">{stats.priorityLeads.map((lead: any) => <Link className="crm-priority-item" key={lead._id} to={`/crm/leads?id=${encodeURIComponent(lead._id)}`}><span className="crm-icon orange"><Flame size={17} /></span><span><strong>{lead.name || 'Unnamed lead'}</strong><small>{lead.status || '—'} · {person(lead.assignedTo)} · {money(lead.leadValue)}</small></span><Tag>{lead.priority || '—'}</Tag></Link>)}</div> : empty('No high-priority open leads')}
+      </Card></div>}</div><div className="crm-work-side">
+{canLeads && <Card className="crm-panel" title="Recent activity"><div className="crm-activity-feed">{(stats.recentActivities || []).length ? stats.recentActivities.map((row: any) => <div className="crm-activity-row" key={row._id}><span className="crm-activity-icon"><ClipboardList size={14} /></span><div><div><strong>{person(row.createdBy)}</strong>{row.leadId?.name && <> · <Link to={`/crm/leads?id=${encodeURIComponent(row.leadId._id)}`}>{row.leadId.name}</Link></>}</div><p>{row.content || 'Activity recorded'}</p><small>{dateText(row.createdAt, true)}</small></div></div>) : empty('No recent activity yet')}</div></Card>}</div></div>}
+      {canCalls && <section className="crm-calls"><div className="crm-section-heading"><div><h2><Phone size={18} /> Communications &amp; call logs</h2><p>Recent call activity</p></div><Link className="crm-link" to="/crm/calls">View call logs <ArrowRight size={15} /></Link></div><Row gutter={[16, 16]}>{[{ title: 'Total calls', value: stats.totals?.totalCalls }, { title: 'Calls today', value: stats.calls?.todayCalls }, { title: 'Completed calls', value: stats.calls?.completed }].map(item => <Col xs={24} sm={8} key={item.title}><Card className="crm-call-metric"><small>{item.title}</small><strong>{formatNumber(item.value ?? 0)}</strong></Card></Col>)}</Row><Card className="crm-panel"><Table size="middle" rowKey="_id" pagination={false} scroll={{ x: 520 }} dataSource={stats.calls?.recentCalls || []} locale={{ emptyText: empty('No recent calls logged') }} columns={[
+        { title: 'LEAD', render: (_: unknown, row: any) => row.leadId?.name || '—' }, { title: 'REP', dataIndex: 'userId', render: person }, { title: 'STATUS', dataIndex: 'status', render: (value: string) => value || '—' }, { title: 'TIME', render: (_: unknown, row: any) => dateText(row.startedAt || row.createdAt, true) },
+      ]} /></Card></section>}
+      {!canLeads && !canCalls && <Alert type="info" showIcon message="Lead and call reports are not available for your role." />}
+    </>}
+  </div>;
+}

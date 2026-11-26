@@ -1,4 +1,5 @@
 import MyHR from '../HumanResource/MyHR';
+import HrReports from '../HumanResource/HrReports';
 import {
   Navigate,
   createBrowserRouter,
@@ -283,6 +284,10 @@ const router = createBrowserRouter([
       {
         path: 'employeee/leave',
         element: <Leave />,
+      },
+      {
+        path: 'reports',
+        element: <HrReports />,
       },
       {
         path: 'employeee/salarySetting',

@@ -6,7 +6,8 @@ import {
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Button,
@@ -31,6 +32,7 @@ import { CalendarOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import attendanceService from '../services/attendanceService';
+import { apiRequest } from '../services/api/apiClient';
 import { usePermissions } from 'src/hooks';
 
 const { Title, Text } = Typography;
@@ -49,7 +51,6 @@ type ApiAttendanceRecord = {
         email?: string;
         phone?: string;
         department?: string;
-        position?: string;
         Id?: string;
       }
     | string;
@@ -75,6 +76,7 @@ type ApiAttendanceRecord = {
     end?: string;
   };
   remarks?: string;
+  isDerived?: boolean;
 };
 
 type AttendanceTableRecord = {
@@ -82,7 +84,6 @@ type AttendanceTableRecord = {
   employeeName: string;
   employeeCode: string;
   department: string;
-  designation: string;
   shiftLabel: string;
   shiftStart: string;
   shiftEnd: string;
@@ -201,15 +202,37 @@ const Attendance = () => {
   const { canUpdate, canDelete, canRead } = usePermissions();
   const [records, setRecords] = useState<AttendanceTableRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [datePreset, setDatePreset] = useState<'today' | 'month' | 'custom'>(
-    'today'
-  );
-  const [dateRange, setDateRange] = useState<
-    [Dayjs | null, Dayjs | null] | null
-  >([dayjs(), dayjs()]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestId = useRef(0);
+  const [knownDepartments, setKnownDepartments] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    apiRequest.get<{ success: boolean; data: { departments: string[] } }>('/attendance/filter-options')
+      .then(res => { if (active && res.success) setKnownDepartments(res.data.departments); })
+      .catch(() => { if (active) message.error('Unable to load department filters'); });
+    return () => { active = false; };
+  }, []);
+  const searchText = searchParams.get('search') ?? '';
+  const departmentFilter = searchParams.get('department') || 'All';
+  const statusFilter = (searchParams.get('status') || 'present').toLowerCase();
+  const today = dayjs().format('YYYY-MM-DD');
+  const startDate = searchParams.has('startDate') ? searchParams.get('startDate') || '' : today;
+  const endDate = searchParams.has('endDate') ? searchParams.get('endDate') || '' : today;
+  const dateRange: [Dayjs | null, Dayjs | null] | null = startDate && endDate && dayjs(startDate).isValid() && dayjs(endDate).isValid() ? [dayjs(startDate), dayjs(endDate)] : null;
+  const datePreset = startDate === today && endDate === today ? 'today' : startDate === dayjs().startOf('month').format('YYYY-MM-DD') && endDate === dayjs().endOf('month').format('YYYY-MM-DD') ? 'month' : 'custom';
+  const updateQuery = (changes: Record<string, string>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(changes).forEach(([key, value]) => next.set(key, value));
+    setSearchParams(next, { replace: true });
+  };
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    if (!next.has('status')) { next.set('status', 'present'); changed = true; }
+    if (!next.has('startDate')) { next.set('startDate', today); changed = true; }
+    if (!next.has('endDate')) { next.set('endDate', today); changed = true; }
+    if (changed) setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, today]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingRecord, setEditingRecord] =
     useState<AttendanceTableRecord | null>(null);
@@ -218,6 +241,7 @@ const Attendance = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const fetchAttendance = async () => {
+    const request = ++requestId.current;
     setLoading(true);
     try {
       const params: Record<string, string> = {
@@ -225,9 +249,11 @@ const Attendance = () => {
         limit: '200',
       };
 
-      if (statusFilter !== 'All') {
+      if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
+      if (searchText.trim()) params.search = searchText.trim();
+      if (departmentFilter !== 'All') params.department = departmentFilter;
 
       if (dateRange?.[0]) {
         params.startDate = dateRange[0].format('YYYY-MM-DD');
@@ -242,6 +268,22 @@ const Attendance = () => {
         'items',
         params
       );
+      if ((statusFilter === 'all' || statusFilter === 'leave') && params.startDate && params.endDate) {
+        const response = await apiRequest.get<{ success: boolean; data: ApiAttendanceRecord[] }>(
+          '/attendance/leave-rows',
+          { params: { startDate: params.startDate, endDate: params.endDate, search: params.search, department: params.department } }
+        );
+        if (!response.success || !Array.isArray(response.data)) throw new Error('Unable to load leave attendance');
+        items.push(...response.data);
+      }
+      if ((statusFilter === 'all' || statusFilter === 'absent') && params.startDate && params.endDate) {
+        const response = await apiRequest.get<{ success: boolean; data: ApiAttendanceRecord[] }>(
+          '/attendance/missing-absences',
+          { params: { startDate: params.startDate, endDate: params.endDate, search: params.search, department: params.department } }
+        );
+        if (!response.success || !Array.isArray(response.data)) throw new Error('Unable to load absentees');
+        items.push(...response.data);
+      }
       const mappedRecords = items.map((item) => {
         const employee = item.employeeId;
         const shiftStart = item.shift?.start?.trim() || '-';
@@ -255,17 +297,13 @@ const Attendance = () => {
             typeof employee === 'string'
               ? '-'
               : employee?.department?.trim() || '-',
-          designation:
-            typeof employee === 'string'
-              ? '-'
-              : employee?.position?.trim() || '-',
           shiftLabel:
             shiftStart === '-' && shiftEnd === '-'
               ? '-'
               : `${shiftStart} - ${shiftEnd}`,
           shiftStart: item.shift?.start?.trim() || '',
           shiftEnd: item.shift?.end?.trim() || '',
-          status: item.status,
+          status: item.status === 'present' && item.isLate ? 'late' as const : item.status,
           checkIn: formatClockTime(item.checkIn?.time),
           checkOut: formatClockTime(item.checkOut?.time),
           workHours: formatHours(item.totalHours),
@@ -280,67 +318,31 @@ const Attendance = () => {
         };
       });
 
+      if (request !== requestId.current) return;
       setRecords(mappedRecords);
+      setKnownDepartments(previous => [...new Set([...previous, ...mappedRecords.map(record => record.department).filter(value => value && value !== '-')])]);
     } catch (error) {
       console.error('Error fetching attendance:', error);
-      message.error('Failed to fetch attendance records');
+      if (request === requestId.current) message.error('Failed to fetch attendance records');
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAttendance();
-  }, [statusFilter, dateRange]);
+    const timer = window.setTimeout(() => { void fetchAttendance(); }, 300);
+    return () => { window.clearTimeout(timer); requestId.current++; };
+  }, [statusFilter, startDate, endDate, searchText, departmentFilter]);
 
   const departments = useMemo(
     () => [
       'All',
-      ...new Set(records.map((record) => record.department).filter(Boolean)),
+      ...new Set([...knownDepartments, ...(departmentFilter === 'All' ? [] : [departmentFilter])]),
     ],
-    [records]
+    [knownDepartments, departmentFilter]
   );
 
-  const filteredRecords = useMemo(() => {
-    return records.filter((record) => {
-      const query = searchText.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        record.employeeName.toLowerCase().includes(query) ||
-        record.employeeCode.toLowerCase().includes(query) ||
-        record.designation.toLowerCase().includes(query);
-
-      const matchesDepartment =
-        departmentFilter === 'All' || record.department === departmentFilter;
-
-      return matchesSearch && matchesDepartment;
-    });
-  }, [records, searchText, departmentFilter]);
-
-  const summary = useMemo(() => {
-    const total = filteredRecords.length;
-    const presentCount = filteredRecords.filter(
-      (record) => record.status === 'present' || record.status === 'late'
-    ).length;
-    const absentCount = filteredRecords.filter(
-      (record) => record.status === 'absent'
-    ).length;
-    const leaveCount = filteredRecords.filter(
-      (record) => record.status === 'leave'
-    ).length;
-    const halfDayCount = filteredRecords.filter(
-      (record) => record.status === 'half_day'
-    ).length;
-
-    return {
-      total,
-      presentCount,
-      absentCount,
-      leaveCount,
-      halfDayCount,
-      rate: total ? Math.round((presentCount / total) * 100) : 0,
-    };
-  }, [filteredRecords]);
+  const filteredRecords = records;
 
   const openViewModal = (record: AttendanceTableRecord) => {
     setViewingRecord(record);
@@ -356,7 +358,7 @@ const Attendance = () => {
     setEditingRecord(record);
     form.setFieldsValue({
       date: dayjs(record.raw.date),
-      status: record.status,
+      status: record.raw.status,
       checkInTime: record.raw.checkIn?.time
         ? dayjs(record.raw.checkIn.time)
         : null,
@@ -378,14 +380,12 @@ const Attendance = () => {
 
   const applyTodayFilter = () => {
     const today = dayjs();
-    setDatePreset('today');
-    setDateRange([today, today]);
+    updateQuery({ startDate: today.format('YYYY-MM-DD'), endDate: today.format('YYYY-MM-DD') });
   };
 
   const applyMonthFilter = () => {
     const now = dayjs();
-    setDatePreset('month');
-    setDateRange([now.startOf('month'), now.endOf('month')]);
+    updateQuery({ startDate: now.startOf('month').format('YYYY-MM-DD'), endDate: now.endOf('month').format('YYYY-MM-DD') });
   };
 
   const handleSubmit = async () => {
@@ -434,7 +434,6 @@ const Attendance = () => {
       'Date',
       'Status',
       'Department',
-      'Designation',
       'Shift',
       'Check In',
       'Check Out',
@@ -453,7 +452,6 @@ const Attendance = () => {
       dayjs(record.date).format('DD MMM YYYY'),
       statusConfig[record.status].label,
       record.department,
-      record.designation,
       record.shiftLabel,
       record.checkIn,
       record.checkOut,
@@ -615,7 +613,7 @@ const Attendance = () => {
             </Button>
           )}
 
-          {canUpdate('timesheet') && (
+          {canUpdate('timesheet') && !record.raw.isDerived && (
             <Button
               type="text"
               icon={<EditOutlined />}
@@ -649,7 +647,7 @@ const Attendance = () => {
                   Attendance Register
                 </Title>
                 <Text type="secondary">
-                  {filteredRecords.length} records visible
+                  {filteredRecords.length} records match the selected filters
                 </Text>
               </div>
               <Space wrap>
@@ -675,76 +673,19 @@ const Attendance = () => {
             </Flex>
 
             <Row gutter={[12, 12]}>
-              {/* <Col xs={24} sm={12} lg={6}>
-                                <Card size="small" bordered={false} style={{ background: '#fafafa' }}>
-                                    <Text type="secondary">Attendance Rate</Text>
-                                    <div style={{ marginTop: 8 }}>
-                                        <Text strong style={{ fontSize: 22 }}>
-                                            {summary.rate}%
-                                        </Text>
-                                    </div>
-                                    <Progress
-                                        percent={summary.rate}
-                                        showInfo={false}
-                                        strokeColor="#52c41a"
-                                        style={{ marginTop: 10, marginBottom: 0 }}
-                                    />
-                                </Card>
-                            </Col> */}
-              <Col xs={24} sm={12} lg={6}>
-                <Card
-                  size="small"
-                  bordered={false}
-                  style={{ background: '#fafafa' }}
-                >
-                  <Text type="secondary">Present / Late</Text>
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong style={{ fontSize: 22 }}>
-                      {summary.presentCount}
-                    </Text>
-                  </div>
-                </Card>
-              </Col>
-              {/* <Col xs={24} sm={12} lg={6}>
-                                <Card size="small" bordered={false} style={{ background: '#fafafa' }}>
-                                    <Text type="secondary">Absentees</Text>
-                                    <div style={{ marginTop: 8 }}>
-                                        <Text strong style={{ fontSize: 22 }}>
-                                            {summary.absentCount}
-                                        </Text>
-                                    </div>
-                                </Card>
-                            </Col> */}
-              <Col xs={24} sm={12} lg={6}>
-                <Card
-                  size="small"
-                  bordered={false}
-                  style={{ background: '#fafafa' }}
-                >
-                  <Text type="secondary">Leave / Half Day</Text>
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong style={{ fontSize: 22 }}>
-                      {summary.leaveCount + summary.halfDayCount}
-                    </Text>
-                  </div>
-                </Card>
-              </Col>
-            </Row>
-
-            <Row gutter={[12, 12]}>
               <Col xs={24} md={8}>
                 <Input.Search
                   allowClear
-                  placeholder="Search by employee, code, or designation"
+                  placeholder="Search by employee or code"
                   value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
+                  onChange={(event) => updateQuery({ search: event.target.value })}
                 />
               </Col>
               <Col xs={24} md={5}>
                 <Select
                   style={{ width: '100%' }}
                   value={departmentFilter}
-                  onChange={setDepartmentFilter}
+                  onChange={(value) => updateQuery({ department: value })}
                   options={departments.map((department) => ({
                     label: department,
                     value: department,
@@ -755,9 +696,9 @@ const Attendance = () => {
                 <Select
                   style={{ width: '100%' }}
                   value={statusFilter}
-                  onChange={setStatusFilter}
+                  onChange={(value) => updateQuery({ status: value })}
                   options={[
-                    { label: 'All', value: 'All' },
+                    { label: 'All', value: 'all' },
                     { label: 'Present', value: 'present' },
                     { label: 'Late', value: 'late' },
                     { label: 'Half Day', value: 'half_day' },
@@ -769,10 +710,10 @@ const Attendance = () => {
               <Col xs={24} md={6}>
                 <RangePicker
                   style={{ width: '100%' }}
+                  allowClear={false}
                   value={dateRange}
                   onChange={(value) => {
-                    setDatePreset('custom');
-                    setDateRange(value);
+                    updateQuery({ startDate: value?.[0]?.format('YYYY-MM-DD') || '', endDate: value?.[1]?.format('YYYY-MM-DD') || '' });
                   }}
                 />
               </Col>
@@ -788,11 +729,12 @@ const Attendance = () => {
                 modelType: 'attendance',
                 onComplete: fetchAttendance,
                 getId: (row) => row.id,
+                disabledReason: (row) => row.raw.isDerived ? 'No saved attendance record to delete' : undefined,
               }}
               listingTitle="Attendance"
               showRecordId={false}
+              hideFilters
               fields={LISTING_FIELDS.attendance}
-              filterKeys={['status', 'department', 'designation']}
               rowKey="id"
               columns={columns}
               dataSource={filteredRecords}
@@ -838,11 +780,6 @@ const Attendance = () => {
                   <Text type="secondary">Department</Text>
                   <br />
                   <Text strong>{viewingRecord.department}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Designation</Text>
-                  <br />
-                  <Text strong>{viewingRecord.designation}</Text>
                 </Col>
               </Row>
             </Card>

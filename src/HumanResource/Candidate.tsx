@@ -3,8 +3,9 @@ import {
   LISTING_FIELDS,
   listingImport,
 } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useState } from 'react';
-import { Button, Modal, Form, Input, Tag, Space, Select, Checkbox } from 'antd';
+import { useEffect, useState, useRef } from 'react';
+import { Button, Modal, Form, Input, Tag, Space, Select, Checkbox, message } from 'antd';
+import { fetchAllListingPages } from 'src/services/listingService';
 import candidateService from 'src/services/candidateService';
 import { Link } from 'react-router-dom';
 import configService from 'src/services/configService';
@@ -20,6 +21,14 @@ const statusColors = {
 
 const Candidate = () => {
   const [candidates, setCandidates] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [options, setOptions] = useState<Record<string, { value: string; label: string }[]>>({});
+  const requestId = useRef(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [designations, setDesignations] = useState<any>([]);
   const [form] = Form.useForm();
@@ -29,9 +38,20 @@ const Candidate = () => {
   const { canCreate, canDelete, canRead } = usePermissions();
 
   const fetchData = async () => {
-    const response = (await getCandidates()) as any;
-    console.log(response);
-    setCandidates(response.data);
+    const request = ++requestId.current;
+    setLoading(true);
+    try {
+      const response = (await getCandidates({ search, ...filters, page, limit: pageSize })) as any;
+      if (!response.success || !Array.isArray(response.data?.items)) throw new Error('Invalid candidates response');
+      if (request !== requestId.current) return;
+      setCandidates(response.data.items);
+      setTotal(response.data.pagination.total);
+      setOptions(Object.fromEntries(Object.entries(response.data.options as Record<string, string[]>).map(([key, values]) => [key, values.filter(Boolean).map(value => ({ value, label: value }))])));
+    } catch {
+      if (request === requestId.current) message.error('Unable to load candidates');
+    } finally {
+      if (request === requestId.current) setLoading(false);
+    }
   };
   useEffect(() => {
     getConfig('employeDesignation')
@@ -42,8 +62,11 @@ const Candidate = () => {
         console.log(err);
       });
 
-    fetchData();
   }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchData(); }, 300);
+    return () => { window.clearTimeout(timer); requestId.current++; };
+  }, [search, filters, page, pageSize]);
 
   console.log(designations);
   // Add Candidate
@@ -58,7 +81,7 @@ const Candidate = () => {
     const response = (await createCandidates(newCandidate)) as any;
     console.log(response);
     if (response) {
-      setCandidates([...candidates, response.data]);
+      await fetchData();
     }
     setIsModalOpen(false);
     form.resetFields();
@@ -128,12 +151,18 @@ const Candidate = () => {
         onRefresh={fetchData}
         fields={LISTING_FIELDS.candidates}
         filterKeys={['status', 'designation', 'source']}
+        filterOptions={options}
+        serverSide
+        onFiltersChange={(value, next) => { setSearch(value); setFilters(next); setPage(1); }}
+        loadExportRows={() => fetchAllListingPages('/hr/candidates', 'items', { search, ...filters })}
         importConfig={
           canCreate('candidates') && listingImport('candidates', fetchData)
         }
         rowHoverable={false}
         columns={columns}
         dataSource={candidates}
+        loading={loading}
+        pagination={{ current: page, pageSize, total, onChange: (next, size) => { setPage(size === pageSize ? next : 1); setPageSize(size); } }}
       />
 
       {/* Modal */}

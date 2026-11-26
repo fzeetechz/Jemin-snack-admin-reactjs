@@ -90,6 +90,11 @@ const Leave = () => {
 
   const columns = [
     {
+      title: 'Staff ID',
+      key: 'staffId',
+      render: (_: any, row: any) => row.employeeId?.Id || '—',
+    },
+    {
       title: 'Employee',
       key: 'employee',
       render: (_: any, row: any) => (
@@ -308,7 +313,7 @@ const Leave = () => {
           </Space>
         }
       >
-        <ListingTable trashConfig={{ canDelete: canDelete('leave'), modelType: 'leave', onComplete: fetchLeaves }} listingTitle="Leave Requests" fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
+        <ListingTable trashConfig={{ canDelete: canDelete('leave'), modelType: 'leave', onComplete: fetchLeaves }} listingTitle="Leave Requests" showRecordId={false} fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
           rowKey="_id"
           columns={columns}
           dataSource={filtered}
@@ -355,6 +360,7 @@ const Leave = () => {
                   <Text type="secondary">
                     {selectedLeave.employeeId?.email}
                   </Text>
+                  <Text type="secondary">Staff ID: {selectedLeave.employeeId?.Id || '—'}</Text>
                 </Flex>
               </Flex>
             </Card>

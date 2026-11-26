@@ -25,6 +25,7 @@ export const PATH_CRM = {
     payslip: '/hrms/setting/payslip',
     candidate: '/hrms/candidate',
     Settings: '/hrms/setting',
+    reports: '/hrms/reports',
   },
   calls: '/crm/calls',
   recordings: '/crm/recordings',
@@ -295,6 +296,7 @@ export const hasRouteAccess = (
 
   const normalizedRoute = normalizeRoute(route);
   if (normalizedRoute === PATH_CRM.dashboard) return true;
+  if (normalizedRoute === PATH_CRM.hr.reports) return ['attendance', 'leave', 'payroll'].some((module) => canViewModule(userPermissions, module));
   if (normalizedRoute === PATH_CRM.trash) {
     return userPermissions.some((permission) => permission.actions.some((action) => ['read', 'view'].includes(action)));
   }

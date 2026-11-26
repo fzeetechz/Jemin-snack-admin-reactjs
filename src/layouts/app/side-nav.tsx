@@ -21,6 +21,7 @@ import {
   Building2,
   ChevronRight,
   Trash2,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -137,6 +138,11 @@ const CRM_MENU_ITEMS: MenuProps['items'] = [
     <CalendarDays size={19} strokeWidth={1.8} />
   ),
   getItem(
+    <Link to={PATH_CRM.hr.reports}>HR Reports</Link>,
+    PATH_CRM.hr.reports,
+    <ChartNoAxesCombined size={19} strokeWidth={1.8} />
+  ),
+  getItem(
     <Link to={PATH_CRM.hr.salarySetting}>Salary Setting</Link>,
     PATH_CRM.hr.salarySetting,
     <Wallet size={19} strokeWidth={1.8} />
@@ -228,6 +234,7 @@ function filterMenuByRole(
     if (typeof k !== 'string') return false;
     if (k === '/hrms/my') return Boolean(user) && !isAdminUser(user);
     if (k === PATH_CRM.dashboard || isAdminUser(user)) return true;
+    if (k === PATH_CRM.hr.reports) return ['attendance', 'leave', 'payroll'].some((module) => canViewModule(userPermissions, module));
 
     if (k === PATH_CRM.trash) return userPermissions.some((permission) => permission.actions.some((action) => ['read', 'view'].includes(action)));
     const module = getRouteModule(k);

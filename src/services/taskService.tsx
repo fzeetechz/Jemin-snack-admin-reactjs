@@ -13,6 +13,12 @@ const taskService = () => {
       if (params?.timeFilter)
         queryParams.append('timeFilter', params.timeFilter);
       if (params?.name) queryParams.append('name', params.name);
+      if (params?.relatedType) queryParams.append('relatedType', params.relatedType);
+      if (params?.relatedId) queryParams.append('relatedId', params.relatedId);
+      if (params?.page) queryParams.append('page', String(params.page));
+      if (params?.limit) queryParams.append('limit', String(params.limit));
+      if (params?.__dateFrom) queryParams.append('__dateFrom', params.__dateFrom);
+      if (params?.__dateTo) queryParams.append('__dateTo', params.__dateTo);
 
       const url = queryParams.toString()
         ? `${API_ENDPOINTS.TASK.LIST}?${queryParams.toString()}`

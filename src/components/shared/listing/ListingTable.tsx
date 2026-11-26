@@ -47,7 +47,9 @@ const detailLabel = (key: string) =>
     .replace(/^./, (character) => character.toUpperCase());
 
 const isInternalDetailKey = (key: string) => {
-  const leafKey = key.split('.').pop()?.toLowerCase() ?? key.toLowerCase();
+  const rawLeaf = key.split('.').pop() ?? key;
+  if (rawLeaf === 'Id') return false;
+  const leafKey = rawLeaf.toLowerCase();
   return ['id', '_id', '__v', 'responsekeys'].includes(leafKey) || leafKey.endsWith('id');
 };
 
@@ -104,8 +106,11 @@ interface ListingTableProps<T extends object> extends TableProps<T> {
   listingTitle: string;
   showRecordId?: boolean;
   searchPlaceholder?: string;
+  hideFilters?: boolean;
   fields: ListingField[];
   filterKeys?: string[];
+  filterOptions?: Record<string, { value: string; label: string }[]>;
+  serverDateField?: string;
   importConfig?: ListingImport | false;
   showUpload?: boolean;
   onRefresh?: () => Promise<unknown> | void;
@@ -121,8 +126,11 @@ export default function ListingTable<T extends object>({
   listingTitle,
   showRecordId = true,
   searchPlaceholder,
+  hideFilters = false,
   fields,
   filterKeys = [],
+  filterOptions,
+  serverDateField,
   importConfig,
   showUpload = false,
   onRefresh,
@@ -163,7 +171,7 @@ export default function ListingTable<T extends object>({
           field.key
         )
       )?.key
-    : undefined;
+    : serverDateField;
   const filtered = useMemo(
     () =>
       (serverSide
@@ -488,7 +496,7 @@ export default function ListingTable<T extends object>({
         justify="space-between"
         className="listing-toolbar"
       >
-        <Space wrap className="listing-toolbar-filters" size={10}>
+        {!hideFilters && <Space wrap className="listing-toolbar-filters" size={10}>
           <Input
             value={search}
             onChange={(event) => updateFilters(event.target.value, filters)}
@@ -516,7 +524,7 @@ export default function ListingTable<T extends object>({
               <Select
                 key={key}
                 value={filters[key] || undefined}
-                options={options.map((value) => ({
+                options={filterOptions?.[key] ?? options.map((value) => ({
                   value,
                   label:
                     value === 'true'
@@ -558,7 +566,7 @@ export default function ListingTable<T extends object>({
           {(search || Object.values(filters).some(Boolean)) && (
             <Button onClick={() => updateFilters('', {})}>Clear filters</Button>
           )}
-        </Space>
+        </Space>}
         <Space wrap className="listing-toolbar-actions" size={8}>
           {onRefresh && (
             <Button

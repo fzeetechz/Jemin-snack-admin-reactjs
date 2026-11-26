@@ -10,7 +10,8 @@ import {
   LISTING_FIELDS,
   listingImport,
 } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { apiRequest } from 'src/services/api/apiClient';
 import {
   Avatar,
   Button,
@@ -80,6 +81,13 @@ const CustomersPage = () => {
   const { getLeads } = leadServices();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [cities, setCities] = useState<string[]>([]);
+  const requestId = useRef(0);
   const [, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,22 +104,37 @@ const CustomersPage = () => {
   const [form] = Form.useForm();
 
   const fetchCustomers = async () => {
+    const request = ++requestId.current;
     try {
       setLoading(true);
-      setCustomers(
-        (
-          await fetchAllListingPages<Customer>('/customers', 'customers')
-        ).reverse()
-      );
+      const response = await apiRequest.get<{ success: boolean; data: { customers: Customer[]; pagination: { total: number } } }>('/customers', {
+        params: { page, limit: pageSize, search: search.trim(), type: filters.type || undefined, isActive: filters.isActive || undefined, city: filters['address.city'] || undefined },
+      });
+      if (!response.success || !Array.isArray(response.data?.customers)) throw new Error('Invalid customer response');
+      if (request === requestId.current) {
+        setCustomers(response.data.customers);
+        setTotal(response.data.pagination.total);
+        if (page > 1 && response.data.customers.length === 0) setPage(page - 1);
+      }
     } catch {
-      message.error('Unable to load customers');
+      if (request === requestId.current) message.error('Unable to load customers');
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomers();
+    const timer = window.setTimeout(() => { void fetchCustomers(); }, 300);
+    return () => { window.clearTimeout(timer); requestId.current++; };
+  }, [page, pageSize, search, filters]);
+
+  const fetchCityOptions = () =>
+    apiRequest.get<{ success: boolean; data: { cities: string[] } }>('/customers/filter-options')
+      .then(res => { if (res.success) setCities(res.data.cities); })
+      .catch(() => message.error('Unable to load customer filter options'));
+
+  useEffect(() => {
+    void fetchCityOptions();
     getState(null).then((res: any) => {
       if (res?.success && Array.isArray(res.data))
         setAllStates(res.data.map((s: string) => ({ value: s, label: s })));
@@ -203,6 +226,7 @@ const CustomersPage = () => {
       }
       closeDrawer();
       await fetchCustomers();
+      await fetchCityOptions();
     } catch (err) {
       if (!(err as any)?.errorFields) message.error('Unable to save customer');
     } finally {
@@ -367,12 +391,20 @@ const CustomersPage = () => {
             trashConfig={{
               canDelete: canDelete('customers'),
               modelType: 'customer',
-              onComplete: fetchCustomers,
+              onComplete: async () => { await fetchCustomers(); await fetchCityOptions(); },
             }}
             listingTitle="Customers"
             showRecordId={false}
             fields={LISTING_FIELDS.customers}
             filterKeys={['type', 'isActive', 'address.city']}
+            filterOptions={{
+              type: [{ value: 'individual', label: 'Individual' }, { value: 'company', label: 'Company' }],
+              isActive: [{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }],
+              'address.city': cities.map(city => ({ value: city, label: city })),
+            }}
+            serverSide
+            onFiltersChange={(nextSearch, nextFilters) => { setPage(1); setSearch(nextSearch); setFilters(nextFilters); }}
+            loadExportRows={() => fetchAllListingPages<Customer>('/customers', 'customers', { search: search.trim(), type: filters.type || undefined, isActive: filters.isActive || undefined, city: filters['address.city'] || undefined })}
             importConfig={
               canCreate('customers') &&
               listingImport('customers', fetchCustomers)
@@ -382,7 +414,7 @@ const CustomersPage = () => {
             dataSource={customers}
             loading={loading}
             rowHoverable={false}
-            pagination={{ pageSize: 10, showSizeChanger: true }}
+            pagination={{ current: page, pageSize, total, showSizeChanger: true, onChange: (next, size) => { setPage(size !== pageSize ? 1 : next); setPageSize(size); } }}
             locale={{
               emptyText: (
                 <Empty

@@ -17,7 +17,8 @@ import {
   InputNumber,
   Upload,
 } from 'antd';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { fetchAllListingPages } from 'src/services/listingService';
 import { useAuth, usePermissions } from '../../hooks/index';
 import RelatedToList from '../../assets/jsons/related.json';
 import leadServices from '../../services/leadServices';
@@ -26,7 +27,6 @@ import { apiRequest } from '../../services/api/apiClient';
 import { API_ENDPOINTS } from '../../services/api/endpoints';
 import { MoreOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import staffService from '../../services/staffService';
 import taskService from '../../services/taskService';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -56,17 +56,22 @@ const Tasks = ({ lead }: { lead?: any }) => {
   const { canCreate, canRead, canDelete, canUpdate } = usePermissions();
   const {
     createTask,
-    getByLeadId,
     getTasksList,
     updateTask,
     addAttachement,
   } = taskService();
 
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const requestId = useRef(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
-  const [staff, setStaffs] = useState([]);
+  const [staff, setStaffs] = useState<{ value: string; label: string }[]>([]);
   const [relatedType, setRelatedType] = useState<string>('Lead');
   const [leads, setLeads] = useState([]);
   const [searchLeadText, setSearchLeadText] = useState('');
@@ -74,7 +79,6 @@ const Tasks = ({ lead }: { lead?: any }) => {
   const [taskStatus, setTaskStatus] = useState<any>({});
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const { getStaff } = staffService();
   const { getLeads } = leadServices();
   const { getConfig } = configService();
 
@@ -92,9 +96,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const response = (await getStaff()) as any;
-        setStaffs(response.data.items);
-        const data = response.data.items;
+        const data = await fetchAllListingPages<any>('/staff', 'items');
         if (data.length) {
           setStaffs(
             data.map((item: any) => ({
@@ -117,18 +119,22 @@ const Tasks = ({ lead }: { lead?: any }) => {
     fetchLeads();
   }, []);
   useEffect(() => {
-    fetchTasks();
-  }, [lead]);
+    const timer = window.setTimeout(() => { void fetchTasks(); }, 300);
+    return () => { window.clearTimeout(timer); requestId.current++; };
+  }, [lead?._id, search, filters, page, pageSize]);
 
   const fetchTasks = async () => {
-    if (lead) {
-      const res: any = await getByLeadId(lead._id);
-      if (res.success) setTasks(res.data);
-    } else {
-      const params: any = {};
-
+    const request = ++requestId.current;
+    setLoading(true);
+    try {
+      const params = { ...filters, name: search, page, limit: pageSize, ...(lead ? { relatedType: 'Lead', relatedId: lead._id } : {}) };
       const res: any = await getTasksList(params);
-      if (res.success) setTasks(res.data);
+      if (!res.success || !Array.isArray(res.data?.items)) throw new Error('Invalid tasks response');
+      if (request === requestId.current) { setTasks(res.data.items); setTotal(res.data.pagination.total); }
+    } catch {
+      if (request === requestId.current) message.error('Unable to load tasks');
+    } finally {
+      if (request === requestId.current) setLoading(false);
     }
   };
   console.log(staff);
@@ -323,11 +329,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
       const response = (await updateTask(taskId, { status: newStatus })) as any;
       if (response.success) {
         message.success('Status updated successfully');
-        setTasks(
-          tasks.map((task) =>
-            task._id === taskId ? { ...task, status: newStatus } : task
-          )
-        );
+        await fetchTasks();
       }
     } catch (error) {
       message.error('Failed to update status');
@@ -376,13 +378,7 @@ const Tasks = ({ lead }: { lead?: any }) => {
         form.resetFields();
         setEditingTask(null);
 
-        const refreshRes = lead
-          ? await getByLeadId(lead._id)
-          : ((await getTasksList()) as any);
-
-        if (refreshRes.success) {
-          setTasks(refreshRes.data);
-        }
+        await fetchTasks();
       }
     } catch (error) {
       message.error(`Failed to ${editingTask ? 'update' : 'create'} task`);
@@ -411,13 +407,21 @@ const Tasks = ({ lead }: { lead?: any }) => {
         }
       >
         <ListingTable trashConfig={{ canDelete: canDelete('tasks'), modelType: 'task', onComplete: fetchTasks }} listingTitle="Tasks" onRefresh={fetchTasks} fields={LISTING_FIELDS.tasks} filterKeys={["status","priority","assignee"]} importConfig={canCreate('tasks') && listingImport('tasks', fetchTasks)}
+          serverSide
+          serverDateField="dueDate"
+          filterOptions={{ status: (taskStatus?.value || []).map((item: any) => ({ value: item.value, label: item.label || item.value })), priority: ['Low', 'Medium', 'High', 'Urgent'].map(value => ({ value, label: value })), assignee: staff }}
+          onFiltersChange={(value, next) => { setSearch(value); setFilters(next); setPage(1); }}
+          loadExportRows={() => fetchAllListingPages<Task>('/task', 'items', { ...filters, name: search, ...(lead ? { relatedType: 'Lead', relatedId: lead._id } : {}) })}
           columns={columns}
           dataSource={tasks}
           rowKey="_id"
           loading={loading}
           scroll={{ x: 1200 }}
           pagination={{
-            pageSize: 10,
+            current: page,
+            pageSize,
+            total,
+            onChange: (next, size) => { setPage(size === pageSize ? next : 1); setPageSize(size); },
             showSizeChanger: true,
             showTotal: (total) => `Total ${total} tasks`,
           }}

@@ -9,7 +9,8 @@ import {
   LISTING_FIELDS,
   listingImport,
 } from 'src/components/shared/listing/listing-presets';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { apiRequest } from 'src/services/api/apiClient';
 import {
   Card,
   Col,
@@ -32,7 +33,6 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { UserAvatar } from '../../components';
 // import { imageUrl } from '../../utils/convertor';
 import leadServices from '../../services/leadServices';
-import staffService from '../../services/staffService';
 import { timeConverter } from '../../utils/convertor';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../redux/store';
@@ -45,6 +45,13 @@ import stateService from 'src/services/stateService';
 
 const LeadsPage = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [listingSearch, setListingSearch] = useState('');
+  const [listingFilters, setListingFilters] = useState<Record<string, string>>({});
+  const [listingPage, setListingPage] = useState(1);
+  const [listingPageSize, setListingPageSize] = useState(10);
+  const [listingTotal, setListingTotal] = useState(0);
+  const [listingLoading, setListingLoading] = useState(false);
+  const listingRequest = useRef(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [viewLead, setViewLead] = useState<Lead | null>(null);
@@ -61,7 +68,6 @@ const LeadsPage = () => {
   // };
 
   const { creatLeads, updateLeads, addAttachements } = leadServices();
-  const { getStaff } = staffService();
   const [allStates, setAllStates] = useState([]);
   const [allCities, setAllCities] = useState([]);
   const [selectedState, setSelectedState] = useState<string | null>(null);
@@ -92,12 +98,9 @@ const LeadsPage = () => {
     fetchStates();
   }, []);
   useEffect(() => {
-    fetchLeads();
-    getStaff().then((res: any) => {
-      if (res.success) {
-        console.log(res.data);
-        if (res.data.items && res.data.items.length) {
-          const options = res.data.items.map((r: any) => {
+    fetchAllListingPages<any>('/staff', 'items').then((items) => {
+        if (items.length) {
+          const options = items.map((r: any) => {
             return {
               value: r._id,
               label: r.firstName + ' ' + r.lastName,
@@ -105,9 +108,13 @@ const LeadsPage = () => {
           }) as any;
           setStaffs(options);
         }
-      }
-    });
+    }).catch(() => message.error('Unable to load staff filters'));
   }, [dispatch]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchLeads(); }, 300);
+    return () => { window.clearTimeout(timer); listingRequest.current++; };
+  }, [listingSearch, listingFilters, listingPage, listingPageSize]);
 
   useEffect(() => {
     if (loc.includes('activities/leads')) {
@@ -119,13 +126,13 @@ const LeadsPage = () => {
 
   useEffect(() => {
     const leadId = searchParams.get('id');
-    if (leadId && leads.length > 0) {
-      const lead = leads.find((l) => l._id === leadId);
-      if (lead) {
-        setViewLead(lead);
-      }
-    }
-  }, [searchParams, leads]);
+    if (!leadId) return;
+    let active = true;
+    apiRequest.get<{ success: boolean; data: Lead }>(`/leads/${encodeURIComponent(leadId)}`)
+      .then((res) => { if (active && res.success) setViewLead(res.data); })
+      .catch(() => { if (active) message.error('Unable to load lead'); });
+    return () => { active = false; };
+  }, [searchParams]);
 
   useEffect(() => {
     getConfig('leadStatus,leadPriority,leadSource')
@@ -161,10 +168,21 @@ const LeadsPage = () => {
   }, []);
 
   const fetchLeads = async () => {
+    const request = ++listingRequest.current;
+    setListingLoading(true);
     try {
-      setLeads(await fetchAllListingPages<Lead>('/leads', 'items'));
+      const res = await apiRequest.get<{ success: boolean; data: { items: Lead[]; pagination: { total: number } } }>('/leads', {
+        params: { search: listingSearch, ...listingFilters, page: listingPage, limit: listingPageSize },
+      });
+      if (!res.success || !Array.isArray(res.data?.items)) throw new Error('Invalid leads response');
+      if (request === listingRequest.current) {
+        setLeads(res.data.items);
+        setListingTotal(res.data.pagination.total);
+      }
     } catch {
-      message.error('Unable to load leads');
+      if (request === listingRequest.current) message.error('Unable to load leads');
+    } finally {
+      if (request === listingRequest.current) setListingLoading(false);
     }
   };
 
@@ -463,6 +481,16 @@ const LeadsPage = () => {
               onRefresh={fetchLeads}
               fields={LISTING_FIELDS.leads}
               filterKeys={['status', 'source', 'priority', 'assignedTo']}
+              filterOptions={{
+                status: LEADSTATUS.map((item: any) => ({ value: item.value, label: item.label || item.value })),
+                source: LEADSOURCE.map((item: any) => ({ value: item.value, label: item.label || item.value })),
+                priority: PRIORITY.map((item: any) => ({ value: item.value, label: item.label || item.value })),
+                assignedTo: staffs,
+              }}
+              serverSide
+              serverDateField="createdAt"
+              onFiltersChange={(search, filters) => { setListingSearch(search); setListingFilters(filters); setListingPage(1); }}
+              loadExportRows={() => fetchAllListingPages<Lead>('/leads', 'items', { search: listingSearch, ...listingFilters })}
               importConfig={
                 canCreate('leads') && listingImport('leads', fetchLeads)
               }
@@ -470,7 +498,8 @@ const LeadsPage = () => {
               rowKey="_id"
               columns={columns}
               dataSource={leads}
-              pagination={{ pageSize: 8 }}
+              loading={listingLoading}
+              pagination={{ current: listingPage, pageSize: listingPageSize, total: listingTotal, onChange: (page, size) => { setListingPage(size === listingPageSize ? page : 1); setListingPageSize(size); } }}
               scroll={{ x: 'max-content' }}
               rowHoverable={false}
             />

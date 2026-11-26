@@ -167,7 +167,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <>
-      <NProgress isAnimating={isLoading} key={location.key} />
+      <NProgress isAnimating={isLoading} key={location.pathname} />
       <Layout className="workspace-layout">
         {isMobile && !collapsed && (
           <button
@@ -269,7 +269,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
             <TransitionGroup>
               <SwitchTransition>
                 <CSSTransition
-                  key={`css-transition-${location.key}`}
+                  key={`css-transition-${location.pathname}`}
                   nodeRef={nodeRef}
                   onEnter={() => setIsLoading(true)}
                   onEntered={() => setIsLoading(false)}

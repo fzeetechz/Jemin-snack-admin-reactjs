@@ -25,7 +25,7 @@ import { authService } from '../auth/authService';
 // DEBUG: Module loaded
 console.log('[API Client] Module loaded!');
 
-export const BASEURL = 'https://crm.jeminisnacks.com/backend';
+export const BASEURL = (import.meta.env.VITE_API_BASE_URL || 'https://crm.jeminisnacks.com/backend').replace(/\/+$/, '');
 // export const BASEURL = 'https://3545zl1l-5035.inc1.devtunnels.ms';
 
 // API Configuration

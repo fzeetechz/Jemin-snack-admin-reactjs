@@ -20,7 +20,7 @@ export default function LeadOverview() {
   useEffect(() => {
     let active = true;
     setData(null); setError(false);
-    apiRequest.get<any>(API_ENDPOINTS.DASHBOARD.GET_STATS).then(response => {
+    apiRequest.get<any>(API_ENDPOINTS.DASHBOARD.GET_STATS, { params: { view: 'crm' } }).then(response => {
       if (!active) return;
       if (!response?.data?.leads || !Array.isArray(response.data.leads.recent)) { setError(true); return; }
       setData(response.data);

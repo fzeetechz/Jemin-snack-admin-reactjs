@@ -38,7 +38,7 @@ const TelecallerDashboard = () => {
   const fetchAll = async () => {
     setLoading(true);
     const [statsRes, tasksRes] = await Promise.allSettled([
-      getDashboardStats(),
+      getDashboardStats('crm'),
       getTasksList({ assignee: user?._id, status: 'pending' }),
     ]);
 
