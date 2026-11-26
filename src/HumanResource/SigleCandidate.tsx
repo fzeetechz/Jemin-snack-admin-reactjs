@@ -172,7 +172,7 @@ const SigleCandidate = () => {
   };
   console.log(allowances);
 
-  const sendEmailApi = async (doc: any) => {
+  const sendEmailApi = async (doc: string) => {
     setEmailLoading(true);
     setEmailProgress(0);
 
@@ -188,13 +188,18 @@ const SigleCandidate = () => {
         progress
       )) as any;
       clearInterval(interval);
-      setEmailProgress(100);
       if (res?.success) {
+        setEmailProgress(100);
         message.success('Documents sent to ' + candidate?.email);
-      }
-    } catch {
+      } else throw new Error(res?.message || 'Unable to send documents');
+    } catch (error: any) {
       clearInterval(interval);
-      message.error('Something went wrong');
+      setEmailProgress(0);
+      const body = error?.response?.data;
+      const detail = typeof body?.data === 'string' && body.data.includes('ctcInWords is not defined')
+        ? 'BDE offer letter could not be generated because the backend needs to be updated.'
+        : body?.message;
+      message.error(detail || error?.message || 'Unable to send documents. Please try again.');
     } finally {
       setEmailLoading(false);
       setTimeout(() => setEmailProgress(0), 1500);
@@ -536,7 +541,7 @@ const SigleCandidate = () => {
               icon={<SendOutlined />}
               block
               loading={emailLoading}
-              onClick={sendEmailApi}
+              onClick={() => sendEmailApi('ALL')}
             >
               {emailLoading
                 ? 'Sending Documents...'

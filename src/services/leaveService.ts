@@ -2,9 +2,9 @@ import { apiRequest } from './api/apiClient';
 import { API_ENDPOINTS } from './api/endpoints';
 
 const leaveService = () => {
-  const getAllLeaves = async () => {
+  const getAllLeaves = async (params?: { status?: string; type?: string }) => {
     try {
-      return await apiRequest.get(API_ENDPOINTS.LEAVE.ALL);
+      return await apiRequest.get(API_ENDPOINTS.LEAVE.ALL, { params });
     } catch (error) {
       throw error;
     }

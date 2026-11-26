@@ -157,6 +157,7 @@ const StaffPage = () => {
   const [roles, setRoles] = useState<Role[]>([]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
@@ -250,37 +251,11 @@ const StaffPage = () => {
     form.resetFields();
   };
 
-  const normalizePhone = (phone: string) =>
-    phone.replace(/\s+/g, '').replace(/^\+/, '');
-
-  const isEmailTaken = (email: string, excludeUserId?: string) => {
-    const e = email.trim().toLowerCase();
-    return users.some(
-      (u: any) => u.email.trim().toLowerCase() === e && u._id !== excludeUserId
-    );
-  };
-
-  const isPhoneTaken = (phone: string, excludeUserId?: string) => {
-    const p = normalizePhone(phone);
-    return users.some(
-      (u: any) => normalizePhone(u.phone) === p && u._id !== excludeUserId
-    );
-  };
-
   const handleSubmit = async () => {
+    if (isSaving) return;
     try {
       const values = await form.validateFields();
-      // Unique checks (client-side)
-      const excludeId = editingUser?._id;
-      if (isEmailTaken(values.email, excludeId)) {
-        form.setFields([{ name: 'email', errors: ['Email already exists'] }]);
-        return;
-      }
-      if (isPhoneTaken(values.phone, excludeId)) {
-        form.setFields([{ name: 'phone', errors: ['Phone already exists'] }]);
-        return;
-      }
-
+      setIsSaving(true);
       if (editingUser) {
         const updated = {
           joiningDate: values.joiningDate?.format('YYYY-MM-DD') ?? null,
@@ -293,12 +268,8 @@ const StaffPage = () => {
           shiftId: values?.shiftId,
         };
         const res = (await updateStaff(editingUser._id, updated)) as any;
-        if (res.success) {
-          message.success(res.meassge || 'User updated successfully');
-        }
-        console.log(res);
-        // Call update API here
-
+        if (!res?.success) throw new Error(res?.message || 'Unable to update staff');
+        message.success(res.message || 'User updated successfully');
         closeModal();
       } else {
         const newUser = {
@@ -314,14 +285,20 @@ const StaffPage = () => {
         };
 
         const res = (await createStaff(newUser)) as any;
-        if (res.success) {
-          message.success(res.meassge || 'User added successfully');
-          closeModal();
-        }
+        if (!res?.success) throw new Error(res?.message || 'Unable to add staff');
+        message.success(res.message || 'User added successfully');
+        closeModal();
       }
       await getStaffs();
-    } catch {
-      // validation handled by antd
+    } catch (error: any) {
+      if (error?.errorFields?.length) {
+        form.scrollToField(error.errorFields[0].name, { focus: true });
+        message.error('Please correct the highlighted fields');
+      } else {
+        message.error(error?.response?.data?.message || error?.message || 'Unable to save staff');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -600,8 +577,8 @@ const StaffPage = () => {
         placement="right"
         extra={
           <Space>
-            <Button onClick={closeModal}>Cancel</Button>
-            <Button type="primary" onClick={handleSubmit}>
+            <Button onClick={closeModal} disabled={isSaving}>Cancel</Button>
+            <Button type="primary" onClick={handleSubmit} loading={isSaving}>
               {editingUser ? 'Update User' : 'Add User'}
             </Button>
           </Space>

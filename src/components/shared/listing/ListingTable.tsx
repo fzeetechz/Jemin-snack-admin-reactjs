@@ -513,7 +513,7 @@ export default function ListingTable<T extends object>({
     <Flex align="center" gap={10}>
       <Popover
         trigger="click"
-        placement="bottomLeft"
+        placement="bottomRight"
         open={filtersOpen}
         onOpenChange={setFiltersOpen}
         content={
@@ -686,11 +686,8 @@ export default function ListingTable<T extends object>({
             {toolbarHeader}
             {toolbarSummary}
           </Flex>
-        ) : (
-          !hideFilters && filterControls
-        )}
+        ) : null}
         <Space wrap className="listing-toolbar-actions" size={8}>
-          {toolbarHeader && !hideFilters && filterControls}
           {toolbarActions}
           {onRefresh && (
             <Button
@@ -747,6 +744,7 @@ export default function ListingTable<T extends object>({
               Upload Excel
             </Button>
           )}
+          {!hideFilters && filterControls}
         </Space>
       </Flex>
       <Table<T>

@@ -1,7 +1,8 @@
 import { X as CloseOutlined, RefreshCw as ReloadOutlined, Eye as EyeOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Tag,
   Button,
@@ -38,23 +39,45 @@ const Leave = () => {
   const { getAllLeaves, updateLeaveStatus } = leaveService();
   const { canRead, canUpdate, canDelete } = usePermissions();
   const [leaves, setLeaves] = useState<any[]>([]);
+  const [allLeaves, setAllLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
-  const [typeFilter, setTypeFilter] = useState<string | undefined>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') || undefined;
+  const typeFilter = searchParams.get('type') || undefined;
+  const requestId = useRef(0);
+  const setFilter = (key: string, value?: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value); else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedLeave, setSelectedLeave] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   console.log(canDelete);
   const fetchLeaves = async () => {
+    const request = ++requestId.current;
     setLoading(true);
-    const res: any = await getAllLeaves();
-    if (res?.success) setLeaves(res.data);
-    setLoading(false);
+    try {
+      const [res, totals]: any[] = await Promise.all([
+        getAllLeaves({ status: statusFilter, type: typeFilter }),
+        statusFilter || typeFilter ? getAllLeaves() : Promise.resolve(null),
+      ]);
+      if (!res?.success || (totals && !totals.success)) throw new Error('Unable to load leave requests');
+      if (request === requestId.current) {
+        setLeaves(res.data);
+        setAllLeaves(totals?.data ?? res.data);
+      }
+    } catch {
+      if (request === requestId.current) message.error('Unable to load leave requests');
+    } finally {
+      if (request === requestId.current) setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
+    void fetchLeaves();
+    return () => { requestId.current++; };
+  }, [statusFilter, typeFilter]);
 
   const handleViewLeave = (leave: any) => {
     setSelectedLeave(leave);
@@ -66,26 +89,20 @@ const Leave = () => {
     const res: any = await updateLeaveStatus(id, status);
     if (res?.success) {
       message.success(`Leave ${status.toLowerCase()} successfully`);
-      setLeaves((prev) =>
-        prev.map((l) => (l._id === id ? { ...l, status } : l))
-      );
+      await fetchLeaves();
     } else {
       message.error(res?.message || 'Failed to update status');
     }
     setActionLoading(null);
   };
 
-  const filtered = leaves.filter((l) => {
-    const matchStatus = !statusFilter || l.status === statusFilter;
-    const matchType = !typeFilter || l.type === typeFilter;
-    return matchStatus && matchType;
-  });
+  const filtered = leaves;
 
   const stats = {
-    total: leaves.length,
-    pending: leaves.filter((l) => l.status === 'PENDING').length,
-    approved: leaves.filter((l) => l.status === 'APPROVED').length,
-    rejected: leaves.filter((l) => l.status === 'REJECTED').length,
+    total: allLeaves.length,
+    pending: allLeaves.filter((l) => l.status === 'PENDING').length,
+    approved: allLeaves.filter((l) => l.status === 'APPROVED').length,
+    rejected: allLeaves.filter((l) => l.status === 'REJECTED').length,
   };
 
   const columns = [
@@ -264,9 +281,15 @@ const Leave = () => {
           { label: 'Approved', value: stats.approved, color: '#52c41a' },
           { label: 'Rejected', value: stats.rejected, color: '#ff4d4f' },
         ].map((s) => (
+          <button key={s.label} type="button" aria-label={`Show ${s.label.toLowerCase()} leave requests`} onClick={() => {
+            const next = new URLSearchParams(searchParams);
+            next.delete('type');
+            if (s.label === 'Total') next.delete('status'); else next.set('status', s.label.toUpperCase());
+            setSearchParams(next, { replace: true });
+          }} style={{ padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}>
           <Card
-            key={s.label}
             size="small"
+            hoverable
             style={{ minWidth: 120, borderTop: `3px solid ${s.color}` }}
           >
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -276,6 +299,7 @@ const Leave = () => {
               {s.value}
             </div>
           </Card>
+          </button>
         ))}
       </Flex>
 
@@ -288,7 +312,7 @@ const Leave = () => {
               allowClear
               style={{ width: 150 }}
               value={typeFilter}
-              onChange={setTypeFilter}
+              onChange={(value) => setFilter('type', value)}
               options={Object.entries(LEAVE_TYPE_LABELS).map(([k, v]) => ({
                 value: k,
                 label: v,
@@ -299,7 +323,7 @@ const Leave = () => {
               allowClear
               style={{ width: 140 }}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={(value) => setFilter('status', value)}
               options={['PENDING', 'APPROVED', 'REJECTED'].map((s) => ({
                 value: s,
                 label: s,
@@ -313,7 +337,7 @@ const Leave = () => {
           </Space>
         }
       >
-        <ListingTable trashConfig={{ canDelete: canDelete('leave'), modelType: 'leave', onComplete: fetchLeaves }} listingTitle="Leave Requests" showRecordId={false} fields={LISTING_FIELDS.leave} filterKeys={["status","type"]}
+        <ListingTable trashConfig={{ canDelete: canDelete('leave'), modelType: 'leave', onComplete: fetchLeaves }} listingTitle="Leave Requests" showRecordId={false} fields={LISTING_FIELDS.leave} hideFilters
           rowKey="_id"
           columns={columns}
           dataSource={filtered}

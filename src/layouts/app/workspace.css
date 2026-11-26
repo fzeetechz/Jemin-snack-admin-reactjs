@@ -453,6 +453,7 @@
 .listing-toolbar-actions {
   margin-left: auto;
   flex: 0 1 auto;
+  justify-content: flex-end;
 }
 .listing-search {
   width: 240px;

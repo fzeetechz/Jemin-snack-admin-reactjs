@@ -9,6 +9,8 @@
 .hr-report-section-heading p { margin: 0; color: #758198; font-size: 13px; }
 .hr-report-badge { background: #f1f4fa; color: #64728a; padding: 5px 9px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
 .hr-report-metric { height: 100%; background: #f8faff; border-color: #e7edf7; }
+.hr-report-metric-link { display: block; height: 100%; color: inherit; }
+.hr-report-metric-link:focus-visible { outline: 2px solid #386ccc; outline-offset: 3px; border-radius: 8px; }
 .hr-report-metric .ant-card-body { padding: 15px; }
 .hr-report-metric-label { color: #526078; font-size: 12px; font-weight: 600; }
 .hr-report-metric-note { color: #8792a3; font-size: 11px; }

@@ -207,20 +207,6 @@ const TrashPage = () => {
               }}
               style={{ width: 300 }}
             />
-            <Select
-              aria-label="Filter by model"
-              placeholder="All record types"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              options={options}
-              value={model}
-              style={{ minWidth: 200 }}
-              onChange={(value) => {
-                setModel(value);
-                setSelected([]);
-              }}
-            />
           </Space>
           <Space wrap>
             <Typography.Text>{selectedRows.length} selected</Typography.Text>
@@ -248,6 +234,20 @@ const TrashPage = () => {
                 !selectedRows.every(canRemove)
               }
               onClick={() => confirm(selectedRows, false)}
+            />
+            <Select
+              aria-label="Filter by model"
+              placeholder="All record types"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={options}
+              value={model}
+              style={{ minWidth: 200 }}
+              onChange={(value) => {
+                setModel(value);
+                setSelected([]);
+              }}
             />
           </Space>
         </Flex>
