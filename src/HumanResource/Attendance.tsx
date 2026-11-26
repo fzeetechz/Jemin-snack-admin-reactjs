@@ -1,8 +1,4 @@
-import {
-  PencilLine as EditOutlined,
-  Eye as EyeOutlined,
-  RefreshCw as ReloadOutlined,
-} from 'lucide-react';
+import { PencilLine as EditOutlined, Eye as EyeOutlined } from 'lucide-react';
 import { fetchAllListingPages } from 'src/services/listingService';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS } from 'src/components/shared/listing/listing-presets';
@@ -22,7 +18,6 @@ import {
   Row,
   Select,
   Space,
-  Spin,
   Tag,
   TimePicker,
   Typography,
@@ -344,6 +339,31 @@ const Attendance = () => {
 
   const filteredRecords = records;
 
+  const summary = useMemo(() => {
+    const total = filteredRecords.length;
+    const presentCount = filteredRecords.filter(
+      (record) => record.status === 'present' || record.status === 'late'
+    ).length;
+    const absentCount = filteredRecords.filter(
+      (record) => record.status === 'absent'
+    ).length;
+    const leaveCount = filteredRecords.filter(
+      (record) => record.status === 'leave'
+    ).length;
+    const halfDayCount = filteredRecords.filter(
+      (record) => record.status === 'half_day'
+    ).length;
+
+    return {
+      total,
+      presentCount,
+      absentCount,
+      leaveCount,
+      halfDayCount,
+      rate: total ? Math.round((presentCount / total) * 100) : 0,
+    };
+  }, [filteredRecords]);
+
   const openViewModal = (record: AttendanceTableRecord) => {
     setViewingRecord(record);
     setIsViewModalOpen(true);
@@ -634,67 +654,93 @@ const Attendance = () => {
         minHeight: '100%',
       }}
     >
-      <Space
-        direction="vertical"
-        size={16}
-        style={{ display: 'flex', width: '100%' }}
-      >
-        <Card bordered={false}>
-          <Flex vertical gap={16}>
-            <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
-              <div>
-                <Title level={4} style={{ margin: 0 }}>
-                  Attendance Register
-                </Title>
-                <Text type="secondary">
-                  {filteredRecords.length} records match the selected filters
-                </Text>
-              </div>
-              <Space wrap>
-                <Button
-                  type={datePreset === 'today' ? 'primary' : 'default'}
-                  onClick={applyTodayFilter}
-                >
-                  Today
-                </Button>
-                <Button
-                  type={datePreset === 'month' ? 'primary' : 'default'}
-                  onClick={applyMonthFilter}
-                >
-                  This Month
-                </Button>
-                <Button icon={<CalendarOutlined />} onClick={handleExport}>
-                  Export
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={fetchAttendance}>
-                  Refresh
-                </Button>
-              </Space>
+      <Card bordered={false} styles={{ body: { padding: 16 } }}>
+        <ListingTable
+          trashConfig={{
+            canDelete: canDelete('attendance'),
+            modelType: 'attendance',
+            onComplete: fetchAttendance,
+            getId: (row) => row.id,
+            disabledReason: (row) => row.raw.isDerived ? 'No saved attendance record to delete' : undefined,
+          }}
+          listingTitle="Attendance"
+          toolbarHeader={
+            <Flex align="center" gap={10} wrap>
+              <Title level={4} style={{ margin: 0, fontSize: 18 }}>
+                Attendance Register
+              </Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {filteredRecords.length.toLocaleString('en-IN')} records
+              </Text>
             </Flex>
-
-            <Row gutter={[12, 12]}>
-              <Col xs={24} md={8}>
-                <Input.Search
-                  allowClear
-                  placeholder="Search by employee or code"
-                  value={searchText}
-                  onChange={(event) => updateQuery({ search: event.target.value })}
-                />
-              </Col>
-              <Col xs={24} md={5}>
+          }
+          toolbarSummary={
+            <Flex gap={8} wrap>
+              <Tag
+                color="green"
+                variant="filled"
+                style={{ margin: 0, borderRadius: 6 }}
+              >
+                Present / Late{' '}
+                <strong style={{ marginLeft: 8 }}>
+                  {summary.presentCount}
+                </strong>
+              </Tag>
+              <Tag
+                color="gold"
+                variant="filled"
+                style={{ margin: 0, borderRadius: 6 }}
+              >
+                Leave / Half Day{' '}
+                <strong style={{ marginLeft: 8 }}>
+                  {summary.leaveCount + summary.halfDayCount}
+                </strong>
+              </Tag>
+            </Flex>
+          }
+          toolbarActions={
+            <Button icon={<CalendarOutlined />} onClick={handleExport}>
+              Export CSV
+            </Button>
+          }
+          onRefresh={fetchAttendance}
+          loading={loading}
+          showRecordId={false}
+          fields={LISTING_FIELDS.attendance}
+          activeFilterCount={
+            Number(Boolean(searchText.trim())) +
+            Number(departmentFilter !== 'All') +
+            Number(statusFilter !== 'all') +
+            Number(Boolean(dateRange?.[0] || dateRange?.[1]))
+          }
+          onClearFilters={() => updateQuery({ search: '', department: 'All', status: 'all', startDate: today, endDate: today })}
+          filterContent={
+            <>
+              <Input
+                allowClear
+                aria-label="Search attendance"
+                placeholder="Search employee or code"
+                value={searchText}
+                onChange={(event) => updateQuery({ search: event.target.value })}
+              />
+              <Flex vertical gap={6}>
+                <Text strong>Department</Text>
                 <Select
-                  style={{ width: '100%' }}
+                  aria-label="Filter department"
                   value={departmentFilter}
                   onChange={(value) => updateQuery({ department: value })}
                   options={departments.map((department) => ({
                     label: department,
                     value: department,
                   }))}
+                  showSearch
+                  optionFilterProp="label"
                 />
-              </Col>
-              <Col xs={24} md={5}>
+              </Flex>
+              <Flex vertical gap={6}>
+                <Text strong>Status</Text>
                 <Select
-                  style={{ width: '100%' }}
+                  aria-label="Filter status"
                   value={statusFilter}
                   onChange={(value) => updateQuery({ status: value })}
                   options={[
@@ -706,9 +752,25 @@ const Attendance = () => {
                     { label: 'On Leave', value: 'leave' },
                   ]}
                 />
-              </Col>
-              <Col xs={24} md={6}>
+              </Flex>
+              <Flex vertical gap={8}>
+                <Text strong>Date range</Text>
+                <Space wrap>
+                  <Button
+                    type={datePreset === 'today' ? 'primary' : 'default'}
+                    onClick={applyTodayFilter}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    type={datePreset === 'month' ? 'primary' : 'default'}
+                    onClick={applyMonthFilter}
+                  >
+                    This Month
+                  </Button>
+                </Space>
                 <RangePicker
+                  aria-label="Filter attendance date range"
                   style={{ width: '100%' }}
                   allowClear={false}
                   value={dateRange}
@@ -716,36 +778,18 @@ const Attendance = () => {
                     updateQuery({ startDate: value?.[0]?.format('YYYY-MM-DD') || '', endDate: value?.[1]?.format('YYYY-MM-DD') || '' });
                   }}
                 />
-              </Col>
-            </Row>
-          </Flex>
-        </Card>
-
-        <Card bordered={false}>
-          <Spin spinning={loading}>
-            <ListingTable
-              trashConfig={{
-                canDelete: canDelete('attendance'),
-                modelType: 'attendance',
-                onComplete: fetchAttendance,
-                getId: (row) => row.id,
-                disabledReason: (row) => row.raw.isDerived ? 'No saved attendance record to delete' : undefined,
-              }}
-              listingTitle="Attendance"
-              showRecordId={false}
-              hideFilters
-              fields={LISTING_FIELDS.attendance}
-              rowKey="id"
-              columns={columns}
-              dataSource={filteredRecords}
-              size="small"
-              pagination={{ pageSize: 14 }}
-              scroll={{ x: 1550 }}
-              rowHoverable={false}
-            />
-          </Spin>
-        </Card>
-      </Space>
+              </Flex>
+            </>
+          }
+          rowKey="id"
+          columns={columns}
+          dataSource={filteredRecords}
+          size="small"
+          pagination={{ pageSize: 14 }}
+          scroll={{ x: 1550 }}
+          rowHoverable={false}
+        />
+      </Card>
 
       <Modal
         title="Attendance Details"
