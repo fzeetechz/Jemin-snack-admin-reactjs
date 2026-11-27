@@ -11,6 +11,7 @@ import {
   listingImport,
 } from 'src/components/shared/listing/listing-presets';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiRequest } from 'src/services/api/apiClient';
 import {
   Avatar,
@@ -35,6 +36,7 @@ import {
   TeamOutlined,
   UserOutlined,
   BranchesOutlined,
+  ShoppingOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import useCustomerService from 'src/services/useCustomerService';
@@ -76,7 +78,8 @@ type Customer = {
 
 const CustomersPage = () => {
   const { createCustomer, updateCustomer } = useCustomerService();
-  const { canCreate, canUpdate, canDelete } = usePermissions();
+  const { canCreate, canUpdate, canDelete, canRead } = usePermissions();
+  const navigate = useNavigate();
   const { getState } = stateService();
   const { getLeads } = leadServices();
 
@@ -329,7 +332,7 @@ const CustomersPage = () => {
     },
     {
       title: 'Actions',
-      width: 110,
+      width: 150,
       align: 'right',
       render: (_, r) => (
         <Space>
@@ -340,6 +343,16 @@ const CustomersPage = () => {
               onClick={() => setViewCustomer(r)}
             />
           </Tooltip>
+          {canRead('quotations') && (
+            <Tooltip title="View orders">
+              <Button
+                size="small"
+                aria-label={`View orders for ${r.name}`}
+                icon={<ShoppingOutlined />}
+                onClick={() => navigate(`/crm/quotations?${new URLSearchParams({ customerId: r._id, customerName: r.name })}`)}
+              />
+            </Tooltip>
+          )}
           {canUpdate('customers') && (
             <Tooltip title="Edit">
               <Button

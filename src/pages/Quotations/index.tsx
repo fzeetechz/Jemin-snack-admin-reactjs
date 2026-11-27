@@ -1,9 +1,11 @@
 import { Trash2 as DeleteOutlined, Eye as EyeOutlined, PencilLine as EditOutlined, Plus as PlusOutlined, RefreshCw as ReloadOutlined } from 'lucide-react';
 import ListingTable from 'src/components/shared/listing/ListingTable';
 import { LISTING_FIELDS, listingImport } from 'src/components/shared/listing/listing-presets';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -56,6 +58,11 @@ type BillTo = { name: string; phone: string; email: string; address: string };
 const EMPTY_BILL: BillTo = { name: '', phone: '', email: '', address: '' };
 
 const QuotationsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const customerId = searchParams.get('customerId') || '';
+  const customerName = searchParams.get('customerName') || customerId;
+  const requestId = useRef(0);
+  const [loadError, setLoadError] = useState('');
   const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -112,18 +119,35 @@ const QuotationsPage = () => {
   const { canCreate, canUpdate, canDelete } = usePermissions();
 
   const fetchQuotations = async () => {
+    const request = ++requestId.current;
+    setLoading(true);
+    setLoadError('');
+    setQuotations([]);
     try {
-      setLoading(true);
-      const res: any = await apiClient.get('/quotations');
-      if (res.data?.success) setQuotations(res.data.data || []);
+      const res: any = await apiClient.get('/quotations', {
+        params: customerId ? { customerId } : {},
+      });
+      if (request !== requestId.current) return;
+      if (!res.data?.success || !Array.isArray(res.data.data)) {
+        throw new Error(res.data?.message || 'Unable to load orders');
+      }
+      setQuotations(res.data.data);
+    } catch (error: any) {
+      if (request === requestId.current) {
+        setLoadError(error?.response?.data?.message || error?.message || 'Unable to load orders');
+      }
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchQuotations();
+    return () => { requestId.current += 1; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId]);
 
+  useEffect(() => {
     getProducts({ limit: 1000 }).then((res: any) => {
       const body = res?.data ?? res;
       const list = body?.data?.products ?? body?.products ?? [];
@@ -449,6 +473,18 @@ const QuotationsPage = () => {
         </Space>
       </Flex>
 
+      {customerId && (
+        <Space style={{ marginBottom: 16 }}>
+          <Text>Showing orders for <Text strong>{customerName}</Text></Text>
+          <Button onClick={() => {
+            const next = new URLSearchParams(searchParams);
+            next.delete('customerId');
+            next.delete('customerName');
+            setSearchParams(next);
+          }}>Show all orders</Button>
+        </Space>
+      )}
+      {loadError && <Alert type="error" showIcon message="Unable to load orders" description={loadError} style={{ marginBottom: 16 }} />}
       <Card>
         <ListingTable trashConfig={{ canDelete: canDelete('quotations'), modelType: 'quotation', onComplete: fetchQuotations }} listingTitle="Orders" showRecordId={false} fields={LISTING_FIELDS.quotations} filterKeys={["orderStatus"]} importConfig={canCreate('quotations') && listingImport('quotations', fetchQuotations)}
           rowKey="_id"
@@ -461,7 +497,7 @@ const QuotationsPage = () => {
             emptyText: (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="No orders yet"
+                description={loadError ? "Orders could not be loaded" : customerId ? "No orders found for this customer" : "No orders yet"}
               />
             ),
           }}
